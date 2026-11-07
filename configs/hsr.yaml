@@ -1,0 +1,100 @@
+version: 1
+id: hsr
+name: 崩坏：星穹铁道
+game_version: "3.x"
+region: cn
+notes: >-
+  M0 只在登录界面与主界面验证。anchors 是占位校准值（region 为窗口内的归一化矩形），
+  首次实机运行前必须先用 game_capture 截图，再按实际 UI 位置改每个 anchor 的 region。
+
+window:
+  process: StarRail.exe
+  title_regex: 崩坏：星穹铁道|Honkai: Star Rail
+  class_name: UnityWndClass
+  borderless: true
+  client_area_only: true
+  min_client_size: [1280, 720]
+  dpi_aware: true
+
+capture:
+  backend: gdi
+  fps: 5
+  scale: 1.0
+  format: png
+  color: bgr
+  roi: [0.0, 0.0, 1.0, 1.0]
+
+input:
+  backend: sendinput
+  key_hold_ms: 40
+  click_hold_ms: 60
+  move_steps: 8
+  focus_check: true
+  release_on_blur: true
+  keymap:
+    confirm: enter
+    cancel: esc
+    map: m
+
+ui:
+  theme: dark
+  anchors:
+    - id: login_enter
+      template: null
+      region: [0.35, 0.74, 0.65, 0.92]
+      threshold: 0.85
+      note: 登录界面的「进入游戏」按钮，M0 占位
+    - id: mail_icon
+      template: null
+      region: [0.88, 0.05, 0.98, 0.17]
+      threshold: 0.85
+      note: 主界面右上角邮件图标，M0 占位
+  screens: []
+
+tasks:
+  - id: login_touch
+    name: 进入游戏（只点登录按钮）
+    entry: launcher
+    risk: low
+    timeout_s: 60
+    success: window_title_changed
+    steps:
+      - type: wait
+        condition: {kind: stable, stable_ms: 800}
+      - type: click
+        target: {anchor: login_enter}
+  - id: open_map
+    name: 打开地图（只读查看）
+    entry: main_ui
+    risk: low
+    timeout_s: 30
+    success: none
+    steps:
+      - type: key
+        keys: [m]
+        action: tap
+        hold_ms: 40
+
+skills:
+  - id: login_touch
+    description: 点击登录按钮进入游戏（需先按截图校准 login_enter）
+    actions:
+      - type: wait
+        condition: {kind: stable, stable_ms: 800}
+      - type: click
+        target: {anchor: login_enter}
+        button: left
+        clicks: 1
+        hold_ms: 60
+
+safety:
+  max_runtime_s: 1800
+  max_tasks_per_run: 3
+  emergency_stop_key: F12
+  dry_run: true
+  allowed_tasks: [login_touch, open_map]
+  disallow_pvp: true
+  record: true
+  privacy_regions: []
+  forbid_keys: [alt+f4, alt+tab, win, ctrl+shift+esc]
+  confirm_before: [payment, gacha, delete]

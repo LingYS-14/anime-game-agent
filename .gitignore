@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Runtime output
+captures/
+*.log
+
+# Third-party reference checkout (GameScaling, Apache-2.0, not part of this project)
+vendor/GameScaling/
+
+# Local machine overrides
+configs/*.local.yaml
+.env

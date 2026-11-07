@@ -1,0 +1,254 @@
+# =============================================================================
+# KISEKI Game Profile · 游戏适配包示例
+# 一款游戏一个 YAML；内核代码不应出现任何游戏名。
+# 目标：照着这个文件填完 + 10 项 checklist，5 人日内接入一款新游戏。
+# =============================================================================
+
+version: "0.1"
+id: hsr
+name: "崩坏：星穹铁道"
+game_version: "3.x"          # 语义化或大版本；启动时自检
+region: "cn"                 # cn / global / bilibili
+notes: "示例配置，数值需按实际分辨率与画质标定"
+
+# -----------------------------------------------------------------------------
+# 窗口：怎么找到游戏、什么条件下才能输入
+# -----------------------------------------------------------------------------
+window:
+  process: "StarRail.exe"
+  title_regex: "崩坏：星穹铁道"
+  class_name: null
+  borderless: true           # 必须无边框窗口化，WGC 才能稳定抓取
+  client_area_only: true
+  min_client_size: [1280, 720]
+  dpi_aware: true
+
+# -----------------------------------------------------------------------------
+# 捕获：帧从哪来
+# -----------------------------------------------------------------------------
+capture:
+  backend: wgc               # wgc | dxgi
+  fps: 30
+  resolution: [1920, 1080]   # 标定基准分辨率
+  scale: 1.0                 # 实际分辨率 / 基准分辨率；运行时自动算
+  format: bgr
+  roi: [0.0, 0.0, 1.0, 1.0]  # 归一化裁剪；全屏游戏保持全屏
+  color: { brightness: 1.0, contrast: 1.0, saturation: 1.0 }
+
+# -----------------------------------------------------------------------------
+# 输入：高层语义动作 → 实际键位
+# -----------------------------------------------------------------------------
+input:
+  backend: sendinput         # sendinput | interception（默认不要用内核驱动）
+  key_hold_ms: 40
+  click_hold_ms: 60
+  move_steps: 8              # 鼠标移动拆几步，模拟人手
+  focus_check: true
+  release_on_blur: true
+
+  keymap:
+    move_forward: W
+    move_back: S
+    move_left: A
+    move_right: D
+    sprint: Shift
+    jump: Space
+    interact: F
+    attack: MouseLeft
+    skill: E
+    ultimate: Q
+    dodge: Shift
+    switch_1: "1"
+    switch_2: "2"
+    switch_3: "3"
+    switch_4: "4"
+    open_map: M
+    open_menu: Esc
+    confirm: Enter
+    cancel: Esc
+    scroll_up: WheelUp
+    scroll_down: WheelDown
+
+  mouse:
+    sensitivity: 1.0         # 游戏内灵敏度归一化值
+    invert_y: false
+    dpi_scale: 1.0
+    deadzone: 0.0
+    # 标定结果：移动 1000 千分位对应的视角角度（度），由 calibrate 工具写入
+    degrees_per_1000: null
+
+# -----------------------------------------------------------------------------
+# UI：锚点、OCR 区域、屏幕分类
+# -----------------------------------------------------------------------------
+ui:
+  theme: "hsr-dark"
+  anchor_defaults:
+    threshold: 0.88
+    method: TM_CCOEFF_NORMED
+    scale_range: [0.9, 1.1]
+    scales: 5
+    grayscale: true
+
+  anchors:
+    - id: btn_enter
+      template: "ui/hsr/btn_enter.png"
+      region: [0.40, 0.80, 0.60, 0.95]
+      threshold: 0.90
+    - id: btn_claim
+      template: "ui/hsr/btn_claim.png"
+      region: [0.70, 0.80, 0.95, 0.95]
+    - id: icon_mail
+      template: "ui/hsr/icon_mail.png"
+      region: [0.00, 0.00, 0.15, 0.15]
+    - id: icon_stamina
+      template: "ui/hsr/icon_stamina.png"
+      region: [0.75, 0.00, 1.00, 0.10]
+    - id: btn_auto_battle
+      template: "ui/hsr/btn_auto_battle.png"
+      region: [0.80, 0.10, 1.00, 0.25]
+    - id: btn_confirm
+      template: "ui/hsr/btn_confirm.png"
+      region: [0.55, 0.60, 0.85, 0.80]
+
+  ocr_regions:
+    - id: stamina
+      region: [0.78, 0.02, 0.98, 0.08]
+      fields:
+        - name: current
+          pattern: "(\\d{1,3})\\s*/\\s*(\\d{1,3})"
+          group: 1
+        - name: max
+          pattern: "(\\d{1,3})\\s*/\\s*(\\d{1,3})"
+          group: 2
+    - id: currency
+      region: [0.80, 0.06, 0.99, 0.12]
+      fields:
+        - name: credits
+          pattern: "([\\d,]+)"
+    - id: task_title
+      region: [0.05, 0.02, 0.45, 0.08]
+      fields:
+        - name: title
+          pattern: "(.+)"
+
+  screens:
+    - id: main_world
+      any: [anchor:icon_mail, anchor:icon_stamina]
+      none: [anchor:btn_auto_battle]
+      priority: 10
+    - id: combat
+      any: [anchor:btn_auto_battle]
+      priority: 20
+    - id: result
+      any: [ocr:task_title]
+      none: [anchor:btn_auto_battle]
+      priority: 30
+    - id: map
+      any: [anchor:btn_enter]
+      priority: 15
+
+  transitions:
+    - from: main_world
+      action: open_map
+      to: map
+    - from: map
+      action: click_waypoint
+      to: loading
+    - from: loading
+      action: wait_stable
+      to: main_world
+
+# -----------------------------------------------------------------------------
+# 任务：可被 L3 选择/参数化；每个任务必须有成功判定与超时
+# -----------------------------------------------------------------------------
+tasks:
+  - id: daily_mail
+    name: "领取邮件"
+    entry: main_world
+    risk: low
+    timeout_s: 90
+    success:
+      all:
+        - ocr: { region: mail_count, equals: 0 }
+        - screen: main_world
+    steps:
+      - skill: click_anchor
+        args: { anchor: icon_mail }
+        expect: { screen: mail }
+      - skill: claim_all
+        args: { anchor: btn_claim }
+      - skill: close_popup
+      - skill: wait_screen
+        args: { screen: main_world, timeout_s: 15 }
+
+  - id: daily_checkin
+    name: "每日签到"
+    entry: main_world
+    risk: low
+    timeout_s: 60
+    success:
+      any:
+        - ocr: { region: checkin_state, contains: "已签到" }
+    steps:
+      - skill: navigate_menu
+        args: { path: ["open_menu", "tab_activity", "btn_checkin"] }
+      - skill: click_anchor
+        args: { anchor: btn_claim }
+      - skill: confirm_dialog
+
+  - id: spend_stamina
+    name: "清体力（拟造花萼）"
+    entry: main_world
+    risk: medium
+    params:
+      count: { type: integer, min: 1, max: 6, default: 6 }
+    timeout_s: 480
+    success:
+      all:
+        - state: { stamina_delta_lte: -40 }
+        - screen: main_world
+    steps:
+      - skill: open_map
+      - skill: select_region
+        args: { region: "雅利洛-VI" }
+      - skill: click_waypoint
+        args: { waypoint: "拟造花萼" }
+      - skill: wait_screen
+        args: { screen: domain_entry, timeout_s: 30 }
+      - skill: select_difficulty
+        args: { difficulty: 6 }
+      - skill: start_battle
+      - skill: auto_battle
+        args: { timeout_s: 300 }
+      - skill: claim_rewards
+      - skill: return_main
+
+# -----------------------------------------------------------------------------
+# 知识库：给 L3 的 RAG 文档
+# -----------------------------------------------------------------------------
+knowledge:
+  files:
+    - "knowledge/hsr/daily.md"
+    - "knowledge/hsr/stamina.md"
+    - "knowledge/hsr/characters.md"
+    - "knowledge/hsr/materials.md"
+  tags: ["hsr", "daily", "3.x"]
+
+# -----------------------------------------------------------------------------
+# 安全：默认保守；任何危险动作必须显式开启
+# -----------------------------------------------------------------------------
+safety:
+  max_runtime_s: 1800
+  max_tasks_per_run: 10
+  emergency_stop_key: F12
+  forbid_keys: []
+  confirm_before:
+    - spend_premium_currency
+    - pull_gacha
+    - delete_item
+    - change_team
+  allowed_tasks: ["daily_mail", "daily_checkin", "spend_stamina"]
+  disallow_pvp: true
+  record: true
+  privacy_regions:
+    - [0.00, 0.88, 0.30, 1.00]   # UID / 聊天框，录制时模糊
