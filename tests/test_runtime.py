@@ -322,6 +322,41 @@ class CaptureScaleTests(unittest.TestCase):
         self.assertLessEqual(abs(result["height"] - 40), 1)
         self.assertEqual(self._png_size(result["path"]), (result["width"], result["height"]))
 
+    def _runtime_with_scale(self, scale_text: str) -> Runtime:
+        (self.root / "configs" / "demo.yaml").write_text(
+            PROFILE_TEXT + f"\ncapture:\n  scale: {scale_text}\n",
+            encoding="utf-8",
+        )
+        return Runtime(root=self.root)
+
+    def _capture_with(self, runtime: Runtime, **kwargs) -> dict:
+        with (
+            patch.object(runtime, "_focused_window", return_value=dict(self.WINDOW)),
+            patch.object(capture, "window_info", return_value=dict(self.WINDOW)),
+            patch.object(capture, "is_foreground", return_value=True),
+            patch.object(capture, "_screen_rgb", side_effect=self._synthetic_screen),
+        ):
+            return runtime.game_capture(game_id="demo", **kwargs)
+
+    def test_profile_capture_scale_is_the_default(self) -> None:
+        runtime = self._runtime_with_scale("0.5")
+        result = self._capture_with(runtime, label="profile-scale")
+        self.assertEqual(result["scale"], 0.5)
+        self.assertEqual(self._png_size(result["path"]), (result["width"], result["height"]))
+
+    def test_explicit_scale_overrides_profile_default(self) -> None:
+        runtime = self._runtime_with_scale("0.5")
+        result = self._capture_with(runtime, label="explicit", scale=1.0)
+        self.assertEqual(result["scale"], 1.0)
+        screen_width, screen_height, _ = self._synthetic_screen()
+        self.assertEqual((result["width"], result["height"]), (screen_width, screen_height))
+
+    def test_invalid_profile_capture_scale_is_rejected(self) -> None:
+        runtime = self._runtime_with_scale("2.0")
+        with self.assertRaises(KisekiError) as ctx:
+            self._capture_with(runtime, label="bad-profile")
+        self.assertEqual(ctx.exception.details.get("code_hint"), "INVALID_SCALE")
+
     def test_invalid_scale_raises_invalid_scale_error(self) -> None:
         for bad_scale in (0, -0.5, 0.2, 1.5):
             with self.subTest(scale=bad_scale):

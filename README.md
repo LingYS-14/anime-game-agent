@@ -110,6 +110,8 @@ python -m kiseki_runtime.mcp_server --self-check
 ```powershell
 # 真实游戏只读冒烟（需要游戏正在运行；只 focus + 截图，不发送输入）
 python scripts/smoke.py hsr --capture
+
+> 截图默认按 profile 的 `capture.scale`（当前 `hsr`/`endfield-map` 均为 `0.5` → 1280x800）下采样；单次调用可用 `game_capture(scale=1.0)` 覆盖。
 ```
 ```
 

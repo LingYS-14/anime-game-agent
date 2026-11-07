@@ -50,6 +50,16 @@ def _version_tuple(text: str) -> tuple[int, ...]:
     return tuple(int(part) for part in text.split(".") if part.isdigit())
 
 
+def _profile_capture_scale(profile: dict[str, Any]) -> float:
+    """The profile-wide default capture scale (``capture.scale``), 1.0 when absent."""
+
+    capture_section = profile.get("capture")
+    if not isinstance(capture_section, dict):
+        return 1.0
+    value = capture_section.get("scale")
+    return 1.0 if value is None else value
+
+
 def _capture_scale(scale: float | None) -> float:
     """Normalize the optional capture scale; reject anything outside 0.25..1.0."""
 
@@ -220,10 +230,10 @@ class Runtime:
         game_id: str | None = None,
         region: list[float] | None = None,
         label: str | None = None,
-        scale: float | None = 1.0,
+        scale: float | None = None,
     ) -> dict[str, Any]:
-        effective_scale = _capture_scale(scale)
         profile = self.profile(game_id) if game_id else self._only_focused_profile()
+        effective_scale = _capture_scale(scale if scale is not None else _profile_capture_scale(profile))
         window = self._focused_window(profile)
         power.keep_awake()
         safe_label = "".join(ch for ch in (label or "capture") if ch.isalnum() or ch in "-_")[:32]
