@@ -59,7 +59,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "type": "number",
                     "minimum": 0.25,
                     "maximum": 1.0,
-                    "description": "optional downscale factor; 1.0 keeps the native pixel size",
+                    "description": "optional downscale factor; defaults to the profile capture.scale (1.0 keeps native pixels)",
                 },
             },
             "additionalProperties": False,
@@ -236,7 +236,7 @@ class Server:
                 game_id=arguments.get("game_id"),
                 region=arguments.get("region"),
                 label=arguments.get("label"),
-                scale=arguments.get("scale", 1.0),
+                scale=arguments.get("scale"),
             )
         if name == "game_state":
             return runtime.game_state(arguments.get("game_id"))

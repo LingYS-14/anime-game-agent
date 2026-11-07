@@ -244,6 +244,22 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(scale["maximum"], 1.0)
         self.assertNotIn("scale", schema["inputSchema"].get("required", []))
 
+    def test_capture_dispatch_defers_scale_to_the_profile(self) -> None:
+        runtime = MagicMock()
+        runtime.game_capture.return_value = {"ok": True}
+        server = Server(runtime=runtime)
+        server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "game_capture", "arguments": {"game_id": "demo"}},
+            }
+        )
+        runtime.game_capture.assert_called_once_with(
+            game_id="demo", scale=None, region=None, label=None
+        )
+
     def test_capture_dispatch_passes_scale_through(self) -> None:
         runtime = MagicMock()
         runtime.game_capture.return_value = {"ok": True}
