@@ -59,8 +59,9 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
   - `ca998eb` M0.2: endfield profile + ACE read-only
   - `12239cb` M0.3: enter_game waits out splash + superagent/cold-start devlog
   - `a5897b2` M0.3: calibrated phone grid and map anchors
-- 远端：已推送 `ca998eb`；`12239cb`/`a5897b2` 因 GitHub 连接间歇性阻断，由后台重试脚本推送中。
-- 单测：20 个全部通过；`--self-check` 正常；仓库私有，`vendor/GameScaling/` 与 `captures/` 已 ignore。
+- 远端：已同步（`04f3666` == origin/main）。夜间 GitHub HTTPS 多次被阻断，由后台重试脚本在网络恢复后一次推完。
+- 单测：**24 个全部通过**（含 4 个 profile 契约测试）；`--self-check` 正常；仓库私有，`vendor/GameScaling/` 与 `captures/` 已 ignore。
+- PR #2 的 CI check `test` **已通过（14s）**，工作流本身可用；按「人审合并」原则未合并。
 
 ## 4. 遇到的问题与教训（按重要度）
 
@@ -68,8 +69,9 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
    会持续拖垮 poll 健康。→ 已写进 devlog 与本次报告。
 2. **MCP 进程缓存 profile**：改 yaml 后锚点不生效 → 已加 mtime 指纹热加载。
 3. **启动 splash 期间点击无效**：`wait stable` 不能判断标题已加载 → `enter_game` 改为固定等 42 s。
-4. **Unity 需要 hover 帧**：click 前需移动后停 50 ms，否则 UI 不响应。
-5. **代理环境变量污染子进程**：DSH 的 `.env` 是全局性的，任何 git/gh/游戏启动都可能受影响 → launcher 已加防护，
+4. **游戏重启后缓存窗口句柄失效**：`game_state` 报 GetWindowRect error 1400 → 已加 `is_window` 校验，句柄失效时清缓存并提示重新 `game_focus`。
+5. **Unity 需要 hover 帧**：click 前需移动后停 50 ms，否则 UI 不响应。
+6. **代理环境变量污染子进程**：DSH 的 `.env` 是全局性的，任何 git/gh/游戏启动都可能受影响 → launcher 已加防护，
    `.env` 死代理行已注释。
 
 ## 5. 待你决定（明早讨论）

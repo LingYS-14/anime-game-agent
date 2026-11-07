@@ -106,6 +106,11 @@ python -m kiseki_runtime.mcp_server --self-check
 
 # 3) MCP 冒烟：stdio 上一次 initialize + tools/list
 '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | python -m kiseki_runtime.mcp_server
+
+```powershell
+# 真实游戏只读冒烟（需要游戏正在运行；只 focus + 截图，不发送输入）
+python scripts/smoke.py hsr --capture
+```
 ```
 
 ```yaml
