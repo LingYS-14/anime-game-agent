@@ -559,6 +559,7 @@ def capture_window_png(
     enable_dpi_awareness()
     info = window_info(int(hwnd))
     left, top, width, height = info["client"]
+    client_width, client_height = width, height
     if width <= 0 or height <= 0:
         raise CaptureError("window has an empty client area", hwnd=hwnd)
     foreground = is_foreground(int(hwnd))
@@ -604,7 +605,7 @@ def capture_window_png(
         "height": height,
         "scale": scale,
         "hwnd": int(hwnd),
-        "client": [left, top, width, height],
+        "client": [left, top, client_width, client_height],
         "region": list(region) if region else None,
         "backend": backend,
         "foreground": foreground,

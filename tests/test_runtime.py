@@ -324,6 +324,13 @@ class CaptureScaleTests(unittest.TestCase):
         assert data[:8] == b"\x89PNG\r\n\x1a\n"
         return struct.unpack(">II", data[16:24])
 
+    def test_region_is_cropped_before_scaling(self) -> None:
+        result = self._capture(label="region", region=[0.0, 0.0, 0.5, 0.5], scale=0.5)
+        # 100x80 client -> [0,0,50,40] region -> 0.5 scale -> 25x20
+        self.assertEqual((result["width"], result["height"]), (25, 20))
+        self.assertEqual(self._png_size(result["path"]), (25, 20))
+        self.assertEqual(result["region"], [0.0, 0.0, 0.5, 0.5])
+
     def test_default_scale_keeps_native_size(self) -> None:
         result = self._capture(label="native")
         screen_width, screen_height, _ = self._synthetic_screen()
