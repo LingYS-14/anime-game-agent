@@ -431,26 +431,112 @@ def _blit_client(hdc_source: wt.HDC, width: int, height: int) -> bytes:
         gdi32.DeleteDC(memory_dc)
 
 
+def _screen_rgb() -> tuple[int, int, bytes]:
+    width = int(user32.GetSystemMetrics(0))
+    height = int(user32.GetSystemMetrics(1))
+    if width <= 0 or height <= 0:
+        raise CaptureError("could not read the primary screen size")
+    hdc = user32.GetDC(None)
+    if not hdc:
+        raise CaptureError(f"GetDC(desktop) failed (error {ctypes.get_last_error()})")
+    try:
+        return width, height, _blit_client(hdc, width, height)
+    finally:
+        user32.ReleaseDC(None, hdc)
+
+
+def _printwindow_rgb(hwnd: int, width: int, height: int) -> bytes:
+    """Ask the window to render itself into a bitmap (works for many D3D windows)."""
+
+    if not hasattr(user32, "PrintWindow"):
+        raise CaptureError("PrintWindow is not available on this Windows build")
+    user32.PrintWindow.argtypes = [wt.HWND, wt.HDC, wt.UINT]
+    user32.PrintWindow.restype = wt.BOOL
+    handle = wt.HWND(int(hwnd))
+    window_dc = user32.GetWindowDC(handle)
+    if not window_dc:
+        raise CaptureError(f"GetWindowDC failed (error {ctypes.get_last_error()})")
+    memory_dc = gdi32.CreateCompatibleDC(window_dc)
+    bitmap = gdi32.CreateCompatibleBitmap(window_dc, width, height)
+    if not memory_dc or not bitmap:
+        user32.ReleaseDC(handle, window_dc)
+        raise CaptureError(f"could not allocate the PrintWindow bitmap (error {ctypes.get_last_error()})")
+    previous = gdi32.SelectObject(memory_dc, bitmap)
+    try:
+        rendered = user32.PrintWindow(handle, memory_dc, 0x00000002)  # PW_RENDERFULLCONTENT
+        if not rendered:
+            raise CaptureError(f"PrintWindow failed (error {ctypes.get_last_error()})", hwnd=int(hwnd))
+        info = BITMAPINFO()
+        info.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
+        info.bmiHeader.biWidth = width
+        info.bmiHeader.biHeight = -height
+        info.bmiHeader.biPlanes = 1
+        info.bmiHeader.biBitCount = 32
+        info.bmiHeader.biCompression = BI_RGB
+        buffer = ctypes.create_string_buffer(width * height * 4)
+        copied = gdi32.GetDIBits(
+            memory_dc, bitmap, 0, height, buffer, ctypes.byref(info), DIB_RGB_COLORS
+        )
+        if copied == 0:
+            raise CaptureError(f"GetDIBits failed (error {ctypes.get_last_error()})")
+        return _bgra_to_rgb(buffer.raw, width, height)
+    finally:
+        gdi32.SelectObject(memory_dc, previous)
+        gdi32.DeleteObject(bitmap)
+        gdi32.DeleteDC(memory_dc)
+        user32.ReleaseDC(handle, window_dc)
+
+
 def capture_window_png(
     hwnd: int,
     path: str | Path,
     region: list[float] | tuple[float, ...] | None = None,
+    prefer_screen: bool | None = None,
 ) -> dict[str, Any]:
-    """Capture the client area of ``hwnd`` (optionally a normalized region)."""
+    """Capture the client area of ``hwnd`` (optionally a normalized region).
+
+    Fullscreen D3D games (flip model) do not update the window DC, so a plain
+    BitBlt of the window returns a stale frame.  When the window is in the
+    foreground we therefore copy the *screen* and crop it to the client area;
+    for background windows we ask the window to render itself via PrintWindow.
+    """
 
     enable_dpi_awareness()
     info = window_info(int(hwnd))
     left, top, width, height = info["client"]
     if width <= 0 or height <= 0:
         raise CaptureError("window has an empty client area", hwnd=hwnd)
-    handle = wt.HWND(int(hwnd))
-    hdc = user32.GetDC(handle)
-    if not hdc:
-        raise CaptureError(f"GetDC failed (error {ctypes.get_last_error()})", hwnd=hwnd)
-    try:
-        rgb = _blit_client(hdc, width, height)
-    finally:
-        user32.ReleaseDC(handle, hdc)
+    foreground = is_foreground(int(hwnd))
+    use_screen = foreground if prefer_screen is None else bool(prefer_screen)
+    if use_screen:
+        screen_w, screen_h, screen = _screen_rgb()
+        if left < 0 or top < 0 or left + width > screen_w or top + height > screen_h:
+            raise CaptureError(
+                "window client area is outside the primary screen",
+                hwnd=int(hwnd),
+                client=[left, top, width, height],
+                screen=[screen_w, screen_h],
+            )
+        rows = [
+            screen[(top + row) * screen_w * 3 + left * 3 : (top + row) * screen_w * 3 + (left + width) * 3]
+            for row in range(height)
+        ]
+        rgb = b"".join(rows)
+        backend = "screen"
+    else:
+        try:
+            rgb = _printwindow_rgb(int(hwnd), width, height)
+            backend = "printwindow"
+        except CaptureError:
+            handle = wt.HWND(int(hwnd))
+            hdc = user32.GetDC(handle)
+            if not hdc:
+                raise CaptureError(f"GetDC failed (error {ctypes.get_last_error()})", hwnd=hwnd)
+            try:
+                rgb = _blit_client(hdc, width, height)
+            finally:
+                user32.ReleaseDC(handle, hdc)
+            backend = "window-dc"
     if region:
         rgb, width, height = _crop_rgb(rgb, width, height, region)
     target = Path(path)
@@ -463,6 +549,8 @@ def capture_window_png(
         "hwnd": int(hwnd),
         "client": [left, top, width, height],
         "region": list(region) if region else None,
+        "backend": backend,
+        "foreground": foreground,
     }
 
 

@@ -1,11 +1,12 @@
 version: 1
 id: hsr
 name: 崩坏：星穹铁道
-game_version: "3.x"
+game_version: "4.6.0"
 region: cn
 notes: >-
-  M0 只在登录界面与主界面验证。anchors 是占位校准值（region 为窗口内的归一化矩形），
-  首次实机运行前必须先用 game_capture 截图，再按实际 UI 位置改每个 anchor 的 region。
+  2026-11-08 实机校准（2560x1600 全屏，DPI 120%）：直接启动 StarRail.exe 会先到标题画面
+  （底部「点击进入」≈ x 0.5 / y 0.94），点击后自动登录并载入派对车厢，无需输入账号密码。
+  anchors 的 region 是窗口客户区内的归一化矩形；改分辨率后需要重新截图校准。
 
 window:
   process: StarRail.exe
@@ -41,14 +42,14 @@ ui:
   anchors:
     - id: login_enter
       template: null
-      region: [0.35, 0.74, 0.65, 0.92]
+      region: [0.30, 0.90, 0.70, 0.98]
       threshold: 0.85
-      note: 登录界面的「进入游戏」按钮，M0 占位
-    - id: mail_icon
+      note: 标题画面底部「点击进入」整条，2026-11-08 实机校准（点击 0.5/0.94 可进入）
+    - id: phone_icon
       template: null
-      region: [0.88, 0.05, 0.98, 0.17]
+      region: [0.655, 0.004, 0.705, 0.062]
       threshold: 0.85
-      note: 主界面右上角邮件图标，M0 占位
+      note: 游戏内右上角一排图标里最左侧的手机（菜单）图标，待今夜逐像素复核
   screens: []
 
 tasks:

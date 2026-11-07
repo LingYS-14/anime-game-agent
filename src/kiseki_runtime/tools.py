@@ -130,6 +130,7 @@ class Runtime:
 
     def game_focus(self, game_id: str) -> dict[str, Any]:
         profile = self.profile(game_id)
+        capture.enable_dpi_awareness()
         rule = profile_module.window_rule(profile)
         window = capture.find_window(
             process=rule.get("process"),
@@ -181,9 +182,10 @@ class Runtime:
             "width": meta["width"],
             "height": meta["height"],
             "region": region,
-            "foreground": capture.is_foreground(int(window["hwnd"])),
+            "backend": meta.get("backend", "unknown"),
+            "foreground": meta.get("foreground", capture.is_foreground(int(window["hwnd"]))),
             "notice": "window is not in the foreground; the frame may be stale or covered"
-            if not capture.is_foreground(int(window["hwnd"]))
+            if not meta.get("foreground", capture.is_foreground(int(window["hwnd"])))
             else None,
         }
 
@@ -318,6 +320,7 @@ class Runtime:
 
     # -- diagnostics -------------------------------------------------------
     def self_check(self, capture_screen: bool = True) -> dict[str, Any]:
+        capture.enable_dpi_awareness()
         report: dict[str, Any] = {
             "version": VERSION,
             "root": str(self.root),
