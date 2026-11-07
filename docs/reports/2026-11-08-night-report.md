@@ -116,3 +116,14 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
 
 第三轮工单（真实代码改动）质量可用：改动范围符合验收（只碰 4 个文件）、纯 Python 实现、带测试、PR 描述完整。
 M0 阶段「superagent 写代码 + 我验证/合并」的分工成立，可在 M1 继续沿用。
+## 9. 04:30 更新：M0.5 截图默认缩放（profile 级）
+
+- **问题**：M1 视觉识别需要更小的截图（原生 2560x1600 PNG 约 5 MB），PR #6 只提供了单次调用的 scale 参数，默认仍抓全尺寸。
+- **实现**（本地提交 d7e124、412a3e1）：
+  - Runtime.game_capture(..., scale=None)：不传时取 profile 的 capture.scale，再缺省为 1.0；
+  - configs/hsr.yaml、configs/endfield-map.yaml 增加 capture.scale: 0.5；
+  - MCP game_capture 的 scale 现在**只在调用方显式传入时透传**（此前默认传 1.0 会覆盖 profile 默认）；
+  - 新增 4 条测试（profile 默认、显式覆盖、非法 profile 值、MCP 缺省），全套 **33 tests OK**；
+  - README 补充一行说明。
+- **真机验证**：game_capture('hsr') 返回 scale=0.5、width=1280, height=800；scale=1.0 覆盖仍为 2560x1600。
+- 结论：M1 的图像输入体积降到约 1/4，后续接模板匹配/OCR 时无需再改接口。
