@@ -42,6 +42,9 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
 - 以 LingYS-14 身份在 issue #1 评论 `@LingYS-14-agent` 触发通知 → 60 s 内建 ticket → worker 独立 worktree
   完成 → 开 **PR #2**「ci: add GitHub Actions workflow for unit tests on windows-latest」（20 行，MERGEABLE）。
 - 工单进入 `stage=person/action=review`，按「人审合并」原则**未自动合并**，留给用户。
+- 第二轮协作（04:00）：issue #3「docs: 新增 M0 锚点校准手册」→ ticket `151595d7...` → worker 产出
+  **PR #4**「docs: 新增 M0 锚点校准手册」（只新增 `docs/05-锚点校准手册.md`，277 行，MERGEABLE）。
+  两轮独立工单均成功，协作链路可重复。
 
 ### 2.4 基础设施修复
 
@@ -76,14 +79,14 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
 
 ## 5. 待你决定（明早讨论）
 
-1. **合并 PR #2**：CI 工作流本身要在合并后才会在 main 上跑；合并后在 PR 上补一条绿链即可。
+1. **合并 PR #2 与 PR #4**：CI 工作流本身要在合并后才会在 main 上跑；合并后在 PR 上补一条绿链即可。
 2. **仓库公开性**：继续 private，还是转 public（代码已无隐私内容，但含游戏自动化说明）。
 3. **superagent 是否常驻维护本仓库**：现在是切到本仓库、人审合并模式；可继续用它接「文档/CI/测试」类工单。
 4. **终末地路线**：「只读副驾」是否足够，还是要换更安全的注入方式（如截图识别 + 人的操作提示）。
 5. **M1 方向**：优先做「视觉感知（模板匹配/OCR）」还是「技能编排（任务 DSL）」——建议先做模板匹配，
    让锚点从手工坐标升级为可校验的视觉定位。
 
-## 6. 下一步建议（M0.1 → M1）
+## 6. 下一小步建议（M0.1 → M1）
 
 - M0.1（1–2 天）：把锚点从「固定坐标」升级为「模板 + 区域 + 阈值」；给 `game_skill` 加前置/后置截图校验；
   补 `tests/` 中锚点 profile 的契约测试；把 42 个锚点的来源截图归档到 `docs/anchors/`。

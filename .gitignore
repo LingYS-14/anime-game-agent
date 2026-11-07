@@ -18,3 +18,4 @@ vendor/GameScaling/
 # Local machine overrides
 configs/*.local.yaml
 .env
+.artifacts/
