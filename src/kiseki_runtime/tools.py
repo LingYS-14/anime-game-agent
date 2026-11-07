@@ -124,11 +124,16 @@ class Runtime:
     def _focused_window(self, profile: dict[str, Any]) -> dict[str, Any]:
         game_id = str(profile["id"])
         hwnd = self._focused.get(game_id)
+        if hwnd is not None and not capture.is_window(hwnd):
+            # The game was restarted (or closed) since the last focus call.
+            self._focused.pop(game_id, None)
+            hwnd = None
         if hwnd is None:
             raise WindowError(
                 f"game {game_id!r} is not focused yet; call game_focus first",
                 code_hint="WINDOW_NOT_FOCUSED",
                 game_id=game_id,
+                hint="the remembered window handle is gone (game restarted?); call game_focus again",
             )
         try:
             return capture.window_info(hwnd)

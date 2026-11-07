@@ -77,6 +77,7 @@ user32.ReleaseDC.argtypes = [wt.HWND, wt.HDC]
 user32.GetWindowRect.argtypes = [wt.HWND, ctypes.POINTER(RECT)]
 user32.GetClientRect.argtypes = [wt.HWND, ctypes.POINTER(RECT)]
 user32.ClientToScreen.argtypes = [wt.HWND, ctypes.POINTER(POINT)]
+user32.IsWindow.argtypes = [wt.HWND]
 user32.IsWindowVisible.argtypes = [wt.HWND]
 user32.IsIconic.argtypes = [wt.HWND]
 user32.GetWindowTextLengthW.argtypes = [wt.HWND]
@@ -183,6 +184,13 @@ def process_name(pid: int) -> str | None:
 
 def foreground_window() -> int:
     return int(user32.GetForegroundWindow() or 0)
+
+
+def is_window(hwnd: int) -> bool:
+    """True when the handle still refers to a live window."""
+    if not hwnd:
+        return False
+    return bool(user32.IsWindow(int(hwnd)))
 
 
 def is_foreground(hwnd: int) -> bool:
