@@ -30,6 +30,9 @@ from .win32 import power
 
 VERSION = "0.1.0"
 
+MIN_CAPTURE_SCALE = 0.25
+MAX_CAPTURE_SCALE = 1.0
+
 TOOL_NAMES = [
     "game_profiles",
     "game_focus",
@@ -45,6 +48,30 @@ TOOL_NAMES = [
 
 def _version_tuple(text: str) -> tuple[int, ...]:
     return tuple(int(part) for part in text.split(".") if part.isdigit())
+
+
+def _capture_scale(scale: float | None) -> float:
+    """Normalize the optional capture scale; reject anything outside 0.25..1.0."""
+
+    if scale is None:
+        return 1.0
+    try:
+        value = float(scale)
+    except (TypeError, ValueError):
+        raise KisekiError(
+            f"scale must be a number between {MIN_CAPTURE_SCALE} and {MAX_CAPTURE_SCALE}",
+            code_hint="INVALID_SCALE",
+            scale=str(scale),
+        ) from None
+    if not MIN_CAPTURE_SCALE <= value <= MAX_CAPTURE_SCALE:
+        raise KisekiError(
+            f"scale must be between {MIN_CAPTURE_SCALE} and {MAX_CAPTURE_SCALE}",
+            code_hint="INVALID_SCALE",
+            scale=value,
+            minimum=MIN_CAPTURE_SCALE,
+            maximum=MAX_CAPTURE_SCALE,
+        )
+    return value
 
 
 class Runtime:
@@ -193,7 +220,9 @@ class Runtime:
         game_id: str | None = None,
         region: list[float] | None = None,
         label: str | None = None,
+        scale: float | None = 1.0,
     ) -> dict[str, Any]:
+        effective_scale = _capture_scale(scale)
         profile = self.profile(game_id) if game_id else self._only_focused_profile()
         window = self._focused_window(profile)
         power.keep_awake()
@@ -201,7 +230,9 @@ class Runtime:
         stamp = time.strftime("%Y%m%d-%H%M%S")
         name = f"{stamp}-{profile['id']}-{safe_label}-{uuid.uuid4().hex[:6]}.png"
         path = self.captures_dir / name
-        meta = capture.capture_window_png(int(window["hwnd"]), path, region=region)
+        meta = capture.capture_window_png(
+            int(window["hwnd"]), path, region=region, scale=effective_scale
+        )
         self._captures += 1
         return {
             "ok": True,
@@ -210,6 +241,7 @@ class Runtime:
             "relative_path": str(path.relative_to(self.root)).replace("\\", "/"),
             "width": meta["width"],
             "height": meta["height"],
+            "scale": meta.get("scale", effective_scale),
             "region": region,
             "backend": meta.get("backend", "unknown"),
             "foreground": meta.get("foreground", capture.is_foreground(int(window["hwnd"]))),
