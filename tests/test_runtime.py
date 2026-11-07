@@ -104,6 +104,23 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("bad.yaml", errors[0]["path"])
 
+    def test_runtime_hot_reloads_profile_edits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            configs = Path(tmp) / "configs"
+            configs.mkdir()
+            target = configs / "demo.yaml"
+            target.write_text(PROFILE_TEXT, encoding="utf-8")
+            runtime = Runtime(root=Path(tmp), profiles_dir=configs)
+            self.assertEqual(sorted(runtime.game_profiles()["profiles"][0]["anchors"]), ["mail", "play"])
+            edited = PROFILE_TEXT.replace(
+                "    - id: mail\n      region: [0.90, 0.05, 0.98, 0.15]\n",
+                "    - id: mail\n      region: [0.90, 0.05, 0.98, 0.15]\n"
+                "    - id: phone\n      region: [0.60, 0.02, 0.66, 0.06]\n",
+            )
+            target.write_text(edited, encoding="utf-8")
+            self.assertIn("phone", runtime.game_profiles()["profiles"][0]["anchors"])
+            self.assertEqual(runtime.profile("demo")["ui"]["anchors"][-1]["id"], "phone")
+
 
 class ActionPlanTests(unittest.TestCase):
     def setUp(self) -> None:

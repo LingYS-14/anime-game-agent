@@ -265,6 +265,9 @@ def click(
         raise InputError(f"unknown mouse button: {button!r}")
     down, up = _MOUSE_BUTTONS[button]
     mouse_move_to(x, y)
+    # Unity/UE games update hover state on the next frame; press only after the
+    # cursor has settled, otherwise the click can land on a stale hit-test.
+    time.sleep(0.05)
     for _ in range(max(1, min(3, int(clicks)))):
         _send(_mouse(flags=down))
         _held_buttons[button] = down

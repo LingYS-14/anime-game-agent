@@ -5,7 +5,10 @@ game_version: "4.6.0"
 region: cn
 notes: >-
   2026-11-08 实机校准（2560x1600 全屏，DPI 120%）：直接启动 StarRail.exe 会先到标题画面
-  （底部「点击进入」≈ x 0.5 / y 0.94），点击后自动登录并载入派对车厢，无需输入账号密码。
+  （底部「点击进入」≈ x 0.5 / y 0.945），点击后自动登录并载入派对车厢，无需输入账号密码。
+  实测流程：启动 → 标题画面（约 40 s）→ 点 title_enter → 黑屏加载约 30 s → 进入派对车厢。
+  注意：如果启动时继承了 HTTP_PROXY/HTTPS_PROXY（例如 DSH 的 .env），星铁会报「网络连接错误」；
+  必须在不带代理环境变量的 shell 里 Start-Process。
   anchors 的 region 是窗口客户区内的归一化矩形；改分辨率后需要重新截图校准。
 
 window:
@@ -40,30 +43,138 @@ input:
 ui:
   theme: dark
   anchors:
-    - id: login_enter
+    - id: title_enter
       template: null
-      region: [0.30, 0.90, 0.70, 0.98]
+      region: [0.462, 0.926, 0.538, 0.964]
       threshold: 0.85
-      note: 标题画面底部「点击进入」整条，2026-11-08 实机校准（点击 0.5/0.94 可进入）
-    - id: phone_icon
+      note: 标题画面底部「点击进入」，2026-11-08 实机校准（点击中心 0.5/0.945 可进入，黑屏加载约 30 s）
+    - id: hud_phone
       template: null
-      region: [0.655, 0.004, 0.705, 0.062]
+      region: [0.685, 0.025, 0.713, 0.063]
       threshold: 0.85
-      note: 游戏内右上角一排图标里最左侧的手机（菜单）图标，待今夜逐像素复核
+      note: 右上角一排 7 个图标的最左一个；实测点击它不会打开手机菜单（疑似公告/活动入口），手机菜单用 Esc 打开，2026-11-08 实机校准
+    - id: hud_toprow_2
+      template: null
+      region: [0.731, 0.025, 0.759, 0.063]
+      threshold: 0.85
+      note: 右上角一排第 2 个图标（功能待确认）
+    - id: hud_toprow_3
+      template: null
+      region: [0.768, 0.025, 0.796, 0.063]
+      threshold: 0.85
+      note: 右上角一排第 3 个图标（功能待确认）
+    - id: hud_toprow_4
+      template: null
+      region: [0.811, 0.025, 0.839, 0.063]
+      threshold: 0.85
+      note: 右上角一排第 4 个图标（功能待确认）
+    - id: hud_toprow_5
+      template: null
+      region: [0.856, 0.025, 0.884, 0.063]
+      threshold: 0.85
+      note: 右上角一排第 5 个图标（功能待确认）
+    - id: hud_toprow_6
+      template: null
+      region: [0.899, 0.025, 0.927, 0.063]
+      threshold: 0.85
+      note: 右上角一排第 6 个图标（功能待确认）
+    - id: hud_avatar
+      template: null
+      region: [0.945, 0.025, 0.973, 0.063]
+      threshold: 0.85
+      note: 右上角最右的头像/角色入口，2026-11-08 实机校准
+    - id: hud_tasks
+      template: null
+      region: [0.016, 0.034, 0.035, 0.069]
+      threshold: 0.85
+      note: 左上角（小地图上方）带红点的任务/手机图标，2026-11-08 实机校准
+    - id: hud_lightbulb
+      template: null
+      region: [0.112, 0.036, 0.139, 0.070]
+      threshold: 0.85
+      note: 左上角小地图右侧的灯泡（提示/攻略）图标，2026-11-08 实机校准
+    - id: hud_minimap
+      template: null
+      region: [0.022, 0.053, 0.124, 0.216]
+      threshold: 0.85
+      note: 左上角圆形小地图整块（可用于判断「是否在游戏内」），2026-11-08 实机校准
+    - id: hud_notebook
+      template: null
+      region: [0.016, 0.178, 0.035, 0.222]
+      threshold: 0.85
+      note: 小地图左侧下方的笔记本/任务图标，2026-11-08 实机校准
+    - id: hud_chat
+      template: null
+      region: [0.014, 0.885, 0.034, 0.921]
+      threshold: 0.85
+      note: 左下角「Enter」聊天入口，2026-11-08 实机校准
+    - id: hud_sprint
+      template: null
+      region: [0.916, 0.889, 0.947, 0.942]
+      threshold: 0.85
+      note: 右下角冲刺/疾跑按钮，2026-11-08 实机校准
+    - id: phone_mail
+      template: null
+      region: [0.673, 0.463, 0.723, 0.543]
+      threshold: 0.85
+      note: 手机 UI 四列网格第 3 行第 1 列「短信」，2026-11-08 实机校准
+    - id: phone_guide
+      template: null
+      region: [0.673, 0.569, 0.723, 0.649]
+      threshold: 0.85
+      note: 手机 UI「指南」按钮，2026-11-08 实机校准
+    - id: phone_nav
+      template: null
+      region: [0.825, 0.569, 0.875, 0.649]
+      threshold: 0.85
+      note: 手机 UI「导航」按钮，2026-11-08 实机校准
+    - id: phone_role
+      template: null
+      region: [0.873, 0.463, 0.923, 0.543]
+      threshold: 0.85
+      note: 手机 UI「角色」按钮，2026-11-08 实机校准
+    - id: phone_backpack
+      template: null
+      region: [0.742, 0.679, 0.792, 0.759]
+      threshold: 0.85
+      note: 手机 UI「背包」按钮，2026-11-08 实机校准
+    - id: phone_tasks
+      template: null
+      region: [0.825, 0.679, 0.875, 0.759]
+      threshold: 0.85
+      note: 手机 UI「任务」按钮，2026-11-08 实机校准
+    - id: phone_close
+      template: null
+      region: [0.958, 0.012, 0.998, 0.058]
+      threshold: 0.85
+      note: 手机 UI 右上角关闭 X，2026-11-08 实机校准
   screens: []
 
 tasks:
-  - id: login_touch
-    name: 进入游戏（只点登录按钮）
-    entry: launcher
+  - id: enter_game
+    name: 从标题进入游戏
+    entry: title
     risk: low
-    timeout_s: 60
-    success: window_title_changed
+    timeout_s: 120
+    success: none
     steps:
       - type: wait
         condition: {kind: stable, stable_ms: 800}
       - type: click
-        target: {anchor: login_enter}
+        target: {anchor: title_enter}
+      - type: wait
+        condition: {kind: seconds, seconds: 35}
+  - id: open_phone
+    name: 打开手机菜单（Esc）
+    entry: main_ui
+    risk: low
+    timeout_s: 30
+    success: none
+    steps:
+      - type: key
+        keys: [esc]
+        action: tap
+        hold_ms: 40
   - id: open_map
     name: 打开地图（只读查看）
     entry: main_ui
@@ -77,23 +188,62 @@ tasks:
         hold_ms: 40
 
 skills:
-  - id: login_touch
-    description: 点击登录按钮进入游戏（需先按截图校准 login_enter）
+  - id: enter_game
+    description: 标题画面点「点击进入」并等待载入（实机约 30 s）
     actions:
       - type: wait
         condition: {kind: stable, stable_ms: 800}
       - type: click
-        target: {anchor: login_enter}
+        target: {anchor: title_enter}
         button: left
         clicks: 1
         hold_ms: 60
+      - type: wait
+        condition: {kind: seconds, seconds: 35}
+  - id: open_phone
+    description: 点击右上角最左的手机图标打开手机菜单
+    actions:
+      - type: click
+        target: {anchor: hud_phone}
+        button: left
+        clicks: 1
+        hold_ms: 60
+      - type: wait
+        condition: {kind: seconds, seconds: 2}
+  - id: phone_open
+    description: 按 Esc 打开手机主界面（星铁实测 Esc 打开手机）
+    actions:
+      - type: key
+        keys: [esc]
+        action: tap
+        hold_ms: 40
+      - type: wait
+        condition: {kind: seconds, seconds: 1.5}
+  - id: phone_close
+    description: 再按一次 Esc 关闭手机主界面
+    actions:
+      - type: key
+        keys: [esc]
+        action: tap
+        hold_ms: 40
+      - type: wait
+        condition: {kind: seconds, seconds: 1.2}
+  - id: close_panel
+    description: 按 Esc 关闭当前面板
+    actions:
+      - type: key
+        keys: [esc]
+        action: tap
+        hold_ms: 40
+      - type: wait
+        condition: {kind: seconds, seconds: 1}
 
 safety:
   max_runtime_s: 1800
   max_tasks_per_run: 3
   emergency_stop_key: F12
   dry_run: true
-  allowed_tasks: [login_touch, open_map]
+  allowed_tasks: [enter_game, open_phone, open_map]
   disallow_pvp: true
   record: true
   privacy_regions: []

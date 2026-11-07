@@ -64,6 +64,7 @@ class Runtime:
         )
         self.captures_dir = self.root / "captures"
         self.profiles, self.profile_errors = profile_module.load_profiles(self.profiles_dir)
+        self._profiles_signature = self._profile_signature()
         self._focused: dict[str, int] = {}
         self._estops: dict[str, estop_module.EmergencyStop] = {}
         self._stopped = False
@@ -72,7 +73,29 @@ class Runtime:
         self._actions = 0
 
     # -- helpers -----------------------------------------------------------
+    def _profile_signature(self) -> tuple[tuple[str, int, int], ...]:
+        """Cheap fingerprint of configs/*.yaml so profile edits hot-reload without restart."""
+        try:
+            return tuple(
+                sorted(
+                    (path.name, path.stat().st_mtime_ns, path.stat().st_size)
+                    for path in self.profiles_dir.glob("*.y*ml")
+                    if path.is_file()
+                )
+            )
+        except OSError:
+            return ()
+
+    def _reload_profiles_if_changed(self) -> bool:
+        signature = self._profile_signature()
+        if signature == self._profiles_signature:
+            return False
+        self.profiles, self.profile_errors = profile_module.load_profiles(self.profiles_dir)
+        self._profiles_signature = signature
+        return True
+
     def profile(self, game_id: str) -> dict[str, Any]:
+        self._reload_profiles_if_changed()
         entry = self.profiles.get(str(game_id))
         if entry is None:
             raise ProfileError(
@@ -120,6 +143,7 @@ class Runtime:
 
     # -- tools -------------------------------------------------------------
     def game_profiles(self) -> dict[str, Any]:
+        self._reload_profiles_if_changed()
         return {
             "ok": True,
             "profiles_dir": str(self.profiles_dir),
