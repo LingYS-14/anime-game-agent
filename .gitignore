@@ -19,3 +19,8 @@ vendor/GameScaling/
 configs/*.local.yaml
 .env
 .artifacts/
+
+# local PR review scratch dirs
+.pr6-review/
+.pr6-src/
+

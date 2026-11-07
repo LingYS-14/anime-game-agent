@@ -99,3 +99,20 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
 - 未读取游戏内存、未注入 DLL、未绕过 ACE/反作弊；只做窗口截图与合法 SendInput。
 - 只使用小号（UID 107760946 / 165165603），未进行付费、抽卡、删除类操作。
 - 游戏自动化可能违反 ToS，风险由使用者承担；本仓库默认 `dry_run: true`。
+
+## 8. 04:15 更新：三个 superagent PR 已合并并验证
+
+- **PR #2（CI）**：.github/workflows/tests.yml，windows-latest + setup-python，PYTHONPATH=src 跑 python -m unittest discover -s tests。合并后 main 上 CI 运行 **success**（run 42410285752/42410292950/42410300217 均为 completed/success）。
+- **PR #4（文档）**：新增 docs/05-锚点校准手册.md（277 行），只新增文件、未动代码。
+- **PR #6（代码）**：game_capture 增加可选 scale（0.25–1.0，默认 1.0）。我在**真机**上验证：
+  - scale=0.5 → 返回 width=1280, height=800，PNG 头尺寸一致，文件 548 KB（原生 2560x1600 约 5 MB）；
+  - scale=2.0 → KisekiError {'code_hint': 'INVALID_SCALE', 'scale': 2.0, 'minimum': 0.25, 'maximum': 1.0}；
+  - PR 分支（tarball）单元测试 **29 tests OK**；合并后 main 本地 **29 tests OK**。
+- 三个 PR 均已 squash 合并：main = d342961（+ cfad2bd、4be7799），远端分支已删除；本地 main 已与远端同步。
+- 合并由我以 LingYS-14 账号执行（gh pr merge --squash --delete-branch）；superagent 的工单随后进入合并态，验证了「agent 开 PR → 人审合并」链路。
+- 网络：GitHub HTTPS 在凌晨多次被阻断，gh pr merge/git fetch 采用「清空代理变量 + 短时重试」方式完成；api.github.com 一直可用。
+
+### 结论
+
+第三轮工单（真实代码改动）质量可用：改动范围符合验收（只碰 4 个文件）、纯 Python 实现、带测试、PR 描述完整。
+M0 阶段「superagent 写代码 + 我验证/合并」的分工成立，可在 M1 继续沿用。
