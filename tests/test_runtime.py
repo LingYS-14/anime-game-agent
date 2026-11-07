@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import struct
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -14,6 +16,7 @@ from kiseki_runtime import actions, profiles, yamlmini  # noqa: E402
 from kiseki_runtime.errors import KisekiError, PolicyError  # noqa: E402
 from kiseki_runtime.mcp_server import Server, TOOL_SCHEMAS  # noqa: E402
 from kiseki_runtime.tools import Runtime  # noqa: E402
+from kiseki_runtime.win32 import capture  # noqa: E402
 
 PROFILE_TEXT = """
 version: 1
@@ -232,6 +235,99 @@ class McpServerTests(unittest.TestCase):
 
     def test_notification_gets_no_response(self) -> None:
         self.assertIsNone(self.server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}))
+
+    def test_capture_schema_exposes_optional_scale(self) -> None:
+        schema = next(tool for tool in TOOL_SCHEMAS if tool["name"] == "game_capture")
+        scale = schema["inputSchema"]["properties"]["scale"]
+        self.assertEqual(scale["type"], "number")
+        self.assertEqual(scale["minimum"], 0.25)
+        self.assertEqual(scale["maximum"], 1.0)
+        self.assertNotIn("scale", schema["inputSchema"].get("required", []))
+
+    def test_capture_dispatch_passes_scale_through(self) -> None:
+        runtime = MagicMock()
+        runtime.game_capture.return_value = {"ok": True}
+        server = Server(runtime=runtime)
+        response = server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "game_capture",
+                    "arguments": {"game_id": "demo", "scale": 0.5},
+                },
+            }
+        )
+        runtime.game_capture.assert_called_once_with(
+            game_id="demo", region=None, label=None, scale=0.5
+        )
+        payload = json.loads(response["result"]["content"][0]["text"])
+        self.assertTrue(payload["ok"])
+
+
+class CaptureScaleTests(unittest.TestCase):
+    """The PNG pipeline is exercised against a synthetic screen (no game window)."""
+
+    WINDOW = {"hwnd": 1, "client": [0, 0, 100, 80], "width": 100, "height": 80}
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "configs").mkdir()
+        (self.root / "configs" / "demo.yaml").write_text(PROFILE_TEXT, encoding="utf-8")
+        self.runtime = Runtime(root=self.root)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    @staticmethod
+    def _synthetic_screen() -> tuple[int, int, bytes]:
+        width, height = 100, 80
+        pixels = bytearray(width * height * 3)
+        for y in range(height):
+            for x in range(width):
+                offset = (y * width + x) * 3
+                pixels[offset] = (x * 2) % 256
+                pixels[offset + 1] = (y * 3) % 256
+                pixels[offset + 2] = (x + y) % 256
+        return width, height, bytes(pixels)
+
+    def _capture(self, **kwargs) -> dict:
+        with (
+            patch.object(self.runtime, "_focused_window", return_value=dict(self.WINDOW)),
+            patch.object(capture, "window_info", return_value=dict(self.WINDOW)),
+            patch.object(capture, "is_foreground", return_value=True),
+            patch.object(capture, "_screen_rgb", side_effect=self._synthetic_screen),
+        ):
+            return self.runtime.game_capture(game_id="demo", **kwargs)
+
+    @staticmethod
+    def _png_size(path: str) -> tuple[int, int]:
+        data = Path(path).read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n"
+        return struct.unpack(">II", data[16:24])
+
+    def test_default_scale_keeps_native_size(self) -> None:
+        result = self._capture(label="native")
+        screen_width, screen_height, _ = self._synthetic_screen()
+        self.assertEqual(result["scale"], 1.0)
+        self.assertEqual((result["width"], result["height"]), (screen_width, screen_height))
+        self.assertEqual(self._png_size(result["path"]), (screen_width, screen_height))
+
+    def test_half_scale_halves_png_dimensions(self) -> None:
+        result = self._capture(label="half", scale=0.5)
+        self.assertEqual(result["scale"], 0.5)
+        self.assertLessEqual(abs(result["width"] - 50), 1)
+        self.assertLessEqual(abs(result["height"] - 40), 1)
+        self.assertEqual(self._png_size(result["path"]), (result["width"], result["height"]))
+
+    def test_invalid_scale_raises_invalid_scale_error(self) -> None:
+        for bad_scale in (0, -0.5, 0.2, 1.5):
+            with self.subTest(scale=bad_scale):
+                with self.assertRaises(KisekiError) as ctx:
+                    self.runtime.game_capture(game_id="demo", scale=bad_scale)
+                self.assertEqual(ctx.exception.details.get("code_hint"), "INVALID_SCALE")
 
 
 if __name__ == "__main__":

@@ -55,6 +55,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "description": "[x0, y0, x1, y1] normalized to 0..1",
                 },
                 "label": {"type": "string", "description": "short label used in the file name"},
+                "scale": {
+                    "type": "number",
+                    "minimum": 0.25,
+                    "maximum": 1.0,
+                    "description": "optional downscale factor; 1.0 keeps the native pixel size",
+                },
             },
             "additionalProperties": False,
         },
@@ -230,6 +236,7 @@ class Server:
                 game_id=arguments.get("game_id"),
                 region=arguments.get("region"),
                 label=arguments.get("label"),
+                scale=arguments.get("scale", 1.0),
             )
         if name == "game_state":
             return runtime.game_state(arguments.get("game_id"))

@@ -386,6 +386,48 @@ def _crop_rgb(
     return b"".join(rows), right - left, bottom - top
 
 
+def _scale_rgb(
+    rgb: bytes, width: int, height: int, scale: float
+) -> tuple[bytes, int, int]:
+    """Downscale RGB pixels with nearest-neighbour sampling (no new dependency)."""
+
+    if scale == 1.0:
+        return rgb, width, height
+    target_width = max(1, round(width * scale))
+    target_height = max(1, round(height * scale))
+    out = bytearray(target_width * target_height * 3)
+    for target_y in range(target_height):
+        source_y = min(height - 1, target_y * height // target_height)
+        source_row = source_y * width * 3
+        index = target_y * target_width * 3
+        for target_x in range(target_width):
+            source_x = min(width - 1, target_x * width // target_width)
+            offset = source_row + source_x * 3
+            out[index] = rgb[offset]
+            out[index + 1] = rgb[offset + 1]
+            out[index + 2] = rgb[offset + 2]
+            index += 3
+    return bytes(out), target_width, target_height
+
+
+def _validated_scale(scale: float) -> float:
+    try:
+        value = float(scale)
+    except (TypeError, ValueError):
+        raise CaptureError(
+            "scale must be a number between 0.25 and 1.0",
+            code_hint="INVALID_SCALE",
+            scale=str(scale),
+        ) from None
+    if not 0.25 <= value <= 1.0:
+        raise CaptureError(
+            "scale must be between 0.25 and 1.0",
+            code_hint="INVALID_SCALE",
+            scale=value,
+        )
+    return value
+
+
 def png_bytes(width: int, height: int, rgb: bytes) -> bytes:
     """Encode raw RGB pixels as a PNG (color type 2, 8 bit, no interlace)."""
 
@@ -500,6 +542,7 @@ def capture_window_png(
     path: str | Path,
     region: list[float] | tuple[float, ...] | None = None,
     prefer_screen: bool | None = None,
+    scale: float = 1.0,
 ) -> dict[str, Any]:
     """Capture the client area of ``hwnd`` (optionally a normalized region).
 
@@ -507,8 +550,12 @@ def capture_window_png(
     BitBlt of the window returns a stale frame.  When the window is in the
     foreground we therefore copy the *screen* and crop it to the client area;
     for background windows we ask the window to render itself via PrintWindow.
+
+    ``scale`` (0.25..1.0) shrinks the captured image with nearest-neighbour
+    sampling; the returned ``width``/``height`` are the scaled pixel sizes.
     """
 
+    scale = _validated_scale(scale)
     enable_dpi_awareness()
     info = window_info(int(hwnd))
     left, top, width, height = info["client"]
@@ -547,6 +594,7 @@ def capture_window_png(
             backend = "window-dc"
     if region:
         rgb, width, height = _crop_rgb(rgb, width, height, region)
+    rgb, width, height = _scale_rgb(rgb, width, height, scale)
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(png_bytes(width, height, rgb))
@@ -554,6 +602,7 @@ def capture_window_png(
         "path": str(target),
         "width": width,
         "height": height,
+        "scale": scale,
         "hwnd": int(hwnd),
         "client": [left, top, width, height],
         "region": list(region) if region else None,
