@@ -26,6 +26,7 @@ from .errors import (
     WindowError,
 )
 from .win32 import capture, input as winput
+from .win32 import power
 
 VERSION = "0.1.0"
 
@@ -145,6 +146,7 @@ class Runtime:
         raised = capture.bring_to_foreground(int(window["hwnd"]))
         self._focused[str(profile["id"])] = int(window["hwnd"])
         self._estop(profile)
+        power.keep_awake()
         return {
             "ok": True,
             "game_id": profile["id"],
@@ -164,6 +166,7 @@ class Runtime:
     ) -> dict[str, Any]:
         profile = self.profile(game_id) if game_id else self._only_focused_profile()
         window = self._focused_window(profile)
+        power.keep_awake()
         safe_label = "".join(ch for ch in (label or "capture") if ch.isalnum() or ch in "-_")[:32]
         stamp = time.strftime("%Y%m%d-%H%M%S")
         name = f"{stamp}-{profile['id']}-{safe_label}-{uuid.uuid4().hex[:6]}.png"
@@ -218,6 +221,7 @@ class Runtime:
                 "planned": planned,
                 "hint": "set dry_run=false (and safety.dry_run: false in the profile) to inject input",
             }
+        power.keep_awake()
         trace = action_module.execute_actions(
             planned,
             hwnd=int(window["hwnd"]),
@@ -284,6 +288,7 @@ class Runtime:
 
     def game_stop(self, reason: str | None = None) -> dict[str, Any]:
         released = winput.release_all()
+        power.release_awake()
         for watcher in self._estops.values():
             watcher.reset()
         self._stopped = False
