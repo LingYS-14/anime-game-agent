@@ -9,7 +9,8 @@
 把 `kiseki_runtime` 从「能跑单测的骨架」推进到「在本机真实游戏上可用的 M0」：
 星铁完成启动→自动登录→HUD/手机/地图锚点实机校准→冷启动全流程可复现；
 终末地确认只能做「只读副驾」（ACE 过滤合成输入，未尝试绕过）；
-dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，已产出待审 PR #2。
+dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通并完成 **3 个真实工单**（CI、文档、代码），
+三个 PR 均经我审阅/验证后以 LingYS-14 账号 squash 合并，main 上 CI 全绿；自动关 issue 也已验证。
 
 ## 2. 完成事项与证据
 
@@ -41,10 +42,12 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
   （备份 `orchestrator.sqlite.bak-kiseki-20261108`），写回 `github-since`。
 - 以 LingYS-14 身份在 issue #1 评论 `@LingYS-14-agent` 触发通知 → 60 s 内建 ticket → worker 独立 worktree
   完成 → 开 **PR #2**「ci: add GitHub Actions workflow for unit tests on windows-latest」（20 行，MERGEABLE）。
-- 工单进入 `stage=person/action=review`，按「人审合并」原则**未自动合并**，留给用户。
-- 第二轮协作（04:00）：issue #3「docs: 新增 M0 锚点校准手册」→ ticket `151595d7...` → worker 产出
-  **PR #4**「docs: 新增 M0 锚点校准手册」（只新增 `docs/05-锚点校准手册.md`，277 行，MERGEABLE）。
-  两轮独立工单均成功，协作链路可重复。
+- 第二轮：issue #3「docs: 新增 M0 锚点校准手册」→ ticket `151595d7...` → **PR #4**（只新增 `docs/05-锚点校准手册.md`，277 行）。
+- 第三轮（真实代码改动）：issue #5「game_capture 可选缩放」→ ticket `c61f7b2d...` → **PR #6**（+185/−1，只碰 4 个文件，附测试）。
+- 三个 PR 均经审阅（PR #6 还在真机上验证了 `scale=0.5` → 1280x800、非法值报 INVALID_SCALE）后
+  以 LingYS-14 账号 squash 合并：#2 → `4be7799`、#4 → `cfad2bd`、#6 → `d342961`；合并后 main CI 三次 success，
+  三个 issue 由插件自动评论并关闭，tickets 清空。
+- 结论：issue→ticket→worker（独立 worktree）→PR→自动关 issue 的链路可重复、可在夜间无人值守运行。
 
 ### 2.4 基础设施修复
 
@@ -56,15 +59,19 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通，�
 
 ## 3. 仓库状态
 
-- 分支 `main`，提交（本地）：
+- 分支 `main`，主要提交（全部已推送远端）：
   - `db59907` M0: kiseki_runtime MCP skeleton
   - `9d2bcbc` M0.1: profile hot-reload, click hover settle, hsr HUD/phone anchors
   - `ca998eb` M0.2: endfield profile + ACE read-only
   - `12239cb` M0.3: enter_game waits out splash + superagent/cold-start devlog
   - `a5897b2` M0.3: calibrated phone grid and map anchors
-- 远端：已同步（`04f3666` == origin/main）。夜间 GitHub HTTPS 多次被阻断，由后台重试脚本在网络恢复后一次推完。
-- 单测：**24 个全部通过**（含 4 个 profile 契约测试）；`--self-check` 正常；仓库私有，`vendor/GameScaling/` 与 `captures/` 已 ignore。
-- PR #2 的 CI check `test` **已通过（14s）**，工作流本身可用；按「人审合并」原则未合并。
+  - `133937b` M0.3: profile contract tests + night report draft
+  - `04f3666` M0.3: re-acquire focus when a remembered window handle is stale
+  - `4be7799`/`cfad2bd`/`d342961` 合并 superagent 的 CI / 文档 / scale 三个 PR
+  - `ed7e124` / `412a3e1` M0.5: profile 级默认截图缩放；`2f97eb9` 报告更新
+- 远端：已同步（`git status` 干净）。夜间 GitHub HTTPS 多次被阻断，由「清代理 + 重试」完成推送。
+- 单测：**33 个全部通过**；`--self-check` 正常；仓库私有，`vendor/GameScaling/`、`captures/`、`.artifacts/`、PR 审查临时目录已 ignore。
+- CI：PR #2 合并后 main 上的 workflow 三次运行全部 success。
 
 ## 4. 遇到的问题与教训（按重要度）
 
