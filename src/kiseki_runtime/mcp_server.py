@@ -157,6 +157,34 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "game_ocr",
+        "description": (
+            "Read text on screen with PaddleOCR (M1.1). Read-only: returns recognised lines "
+            "with pixel rects and 0..1 normalized boxes; click a box with game_act only when "
+            "the score justifies it. Optional anchor restricts OCR to that anchor's region."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "game_id": {"type": "string"},
+                "anchor": {"type": "string", "description": "restrict OCR to this anchor's declared region"},
+                "region": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "[x0, y0, x1, y1] normalized to 0..1; overrides anchor",
+                },
+                "min_confidence": {
+                    "type": "number",
+                    "description": "drop lines below this score, 0..1 (default 0.5)",
+                },
+                "language": {"type": "string", "description": "PaddleOCR language code, default ch"},
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "game_map",
         "description": "Reserved for M2 map understanding; currently returns NOT_IMPLEMENTED.",
         "inputSchema": {
@@ -308,6 +336,14 @@ class Server:
                 timeout=arguments.get("timeout", 10),
                 interval=arguments.get("interval", 0.3),
                 threshold=arguments.get("threshold"),
+            )
+        if name == "game_ocr":
+            return runtime.game_ocr(
+                game_id=arguments.get("game_id"),
+                anchor=arguments.get("anchor"),
+                region=arguments.get("region"),
+                min_confidence=arguments.get("min_confidence"),
+                language=arguments.get("language", "ch"),
             )
         if name == "game_map":
             return runtime.game_map(arguments.get("game_id"))

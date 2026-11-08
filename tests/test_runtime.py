@@ -203,7 +203,7 @@ class McpServerTests(unittest.TestCase):
         listed = self.call("tools/list")
         names = [tool["name"] for tool in listed["result"]["tools"]]
         self.assertEqual(names, [schema["name"] for schema in TOOL_SCHEMAS])
-        self.assertEqual(len(names), 11)
+        self.assertEqual(len(names), 12)
 
     def test_status_tool_works(self) -> None:
         response = self.call("tools/call", {"name": "game_status", "arguments": {}})

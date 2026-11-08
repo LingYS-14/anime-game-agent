@@ -16,6 +16,7 @@ from typing import Any
 
 from . import actions as action_module
 from . import estop as estop_module
+from . import ocr as ocr_module
 from . import profiles as profile_module
 from . import vision as vision_module
 from .errors import (
@@ -43,6 +44,7 @@ TOOL_NAMES = [
     "game_skill",
     "game_locate",
     "game_wait_for",
+    "game_ocr",
     "game_status",
     "game_map",
     "game_stop",
@@ -525,6 +527,76 @@ class Runtime:
                     threshold=result["threshold"],
                 )
             time.sleep(interval_s)
+
+    def game_ocr(
+        self,
+        game_id: str | None = None,
+        anchor: str | None = None,
+        region: list[float] | None = None,
+        min_confidence: float | None = None,
+        language: str = "ch",
+    ) -> dict[str, Any]:
+        """Read text from the current frame with PaddleOCR (M1.1).
+
+        Read-only: it captures one frame (or the search box of ``anchor``) and
+        returns recognised lines with pixel rects plus 0..1 normalized boxes so
+        a caller can click a text target with ``game_act`` when it trusts the
+        score.  Nothing is clicked here.
+        """
+
+        ocr_module.require()
+        profile = self.profile(game_id) if game_id else self._only_focused_profile()
+        window = self._focused_window(profile)
+        search_region = list(region) if region is not None else None
+        if search_region is None and anchor:
+            definition = profile_module.anchors(profile).get(anchor)
+            if definition is None:
+                raise PolicyError(
+                    f"anchor {anchor!r} is not declared by profile {profile['id']!r}",
+                    code_hint="UNKNOWN_ANCHOR",
+                    anchor=anchor,
+                )
+            declared = definition.get("region")
+            if isinstance(declared, (list, tuple)) and len(declared) == 4:
+                search_region = [round(float(value), 6) for value in declared]
+        threshold = ocr_module.normalize_confidence(min_confidence)
+        lang = str(language or "ch").strip() or "ch"
+        if not lang.replace("_", "").isalnum() or len(lang) > 12:
+            raise KisekiError(
+                "language must be a short PaddleOCR language code",
+                code_hint="INVALID_ARGUMENT",
+                language=lang,
+            )
+        power.keep_awake()
+        frame = capture.capture_window_rgb(int(window["hwnd"]), region=search_region, scale=1.0)
+        offset_x, offset_y = (int(value) for value in frame.get("offset", [0, 0]))
+        client_width, client_height = int(frame["client"][2]), int(frame["client"][3])
+        lines = ocr_module.recognize(
+            frame["rgb"],
+            int(frame["width"]),
+            int(frame["height"]),
+            (offset_x, offset_y),
+            client_width,
+            client_height,
+            threshold,
+            lang,
+        )
+        return {
+            "ok": True,
+            "game_id": profile["id"],
+            "anchor": anchor,
+            "region": search_region,
+            "capture_rect": [offset_x, offset_y, int(frame["width"]), int(frame["height"])],
+            "window": {"width": client_width, "height": client_height},
+            "foreground": bool(
+                frame.get("foreground", capture.is_foreground(int(window["hwnd"])))
+            ),
+            "engine": "paddleocr",
+            "language": lang,
+            "min_confidence": threshold,
+            "line_count": len(lines),
+            "lines": lines,
+        }
 
     def game_status(self) -> dict[str, Any]:
         return {

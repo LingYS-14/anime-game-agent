@@ -1,7 +1,7 @@
 # KISEKI · 二次元游戏智能体
 
 > 让 Agent 看着屏幕、理解局面、替你打完二次元游戏的日常。
-> 当前状态：**v0.4 / M0 已跑通 + M1.0 模板匹配**（2026-11-08 起）：`src/kiseki_runtime` 提供 11 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`dry_run`、F12 急停、42 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
+> 当前状态：**v0.5 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR**（2026-11-08 起）：`src/kiseki_runtime` 提供 12 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配与 `game_ocr` PaddleOCR 文本识别、`dry_run`、F12 急停、50 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
 >
 > **v0.3 范围基线**：GameScaling 仅作参考；首发 **崩坏：星穹铁道（只测 UI）** 与 **明日方舟：终末地（地图 > 基建 > 战斗）**；DSH 作为 Agent 基座，主模型继续云端、只用小号。详见 [04-DSH集成与运行时方案](docs/04-DSH集成与运行时方案.md)。
 
@@ -94,14 +94,16 @@ anime-game-agent/
 > 仓库状态：**public**（2026-11-08 起）。提交前会自动跑隐私守卫测试（`tests/test_privacy.py`），
 > 确保本机路径、游戏 UID、token 等不出现在被跟踪文件里。
 
-## 快速验证（M0 已跑通，M1.0 模板匹配已接入）
+## 快速验证（M0 已跑通，M1.0 模板匹配 + M1.1 OCR 已接入）
 
-前置：Windows 11 + DSH 0.2.1-rc.5 + 星铁小号。核心运行时零第三方依赖（Python 3.11+，纯 ctypes）；模板匹配需要 OpenCV（可选安装）：
+前置：Windows 11 + DSH 0.2.1-rc.5 + 星铁小号。核心运行时零第三方依赖（Python 3.11+，纯 ctypes）；模板匹配需要 OpenCV，OCR 需要 PaddleOCR（都是可选安装）。PaddleOCR 依赖较重，建议装进仓库内的独立 venv：
 
 ```powershell
 cd C:\AI\anime-game-agent
-python -m pip install -e .[vision,tools]   # vision = OpenCV（M1.0+），tools = Pillow（构建模板用）
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .[vision,tools,ocr]
 $env:PYTHONPATH="C:\AI\anime-game-agent\src"
+```
 
 # 1) 单元测试（离线：不注入输入、不需要游戏窗口）
 python -m unittest discover -s tests
@@ -132,6 +134,22 @@ python scripts/build_templates.py hsr --write-config
   - `game_wait_for(anchor="phone_close", timeout=5)` → 轮询到出现为止，超时返回 `ANCHOR_NOT_FOUND`。
 - 两个工具都只读、不发输入；`score` 是 `cv2.TM_CCOEFF_NORMED` 灰度匹配分数。
 - 未安装 OpenCV 时返回 `VISION_UNAVAILABLE`，其余工具照常工作。
+
+### M1.1 OCR（PaddleOCR，字体特殊 / 背景复杂 / 中文小字）
+
+```powershell
+# 安装 OCR 额外依赖（重：paddlepaddle + paddleocr，含模型下载）
+.\.venv\Scripts\python.exe -m pip install -e .[ocr]
+
+# MCP 侧直接调用（只读，不发输入）
+# game_ocr(game_id="hsr", anchor="mail_icon")            → 只识别该锚点区域
+# game_ocr(game_id="hsr", region=[0.0,0.0,1.0,1.0])      → 全窗口
+# game_ocr(game_id="hsr", min_confidence=0.8, language="ch")
+```
+
+- 返回 `lines[]`：`text` / `score` / `rect`（客户区像素）/ `normalized_rect` / `normalized_center`（0..1，可直接喂给 `game_act`）；阈值默认 0.5，`language` 默认 `ch`。
+- 模型首次运行会自动下载缓存（`~/.paddleocr`）；未安装 PaddleOCR 时返回 `OCR_UNAVAILABLE`，其余工具照常工作。
+- 引擎为进程内缓存（单例），第一次识别包含初始化耗时，之后单帧通常在百毫秒级。
 
 ### 在 DSH 中挂载
 

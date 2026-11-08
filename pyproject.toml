@@ -23,7 +23,8 @@ kiseki-runtime = "kiseki_runtime.mcp_server:main"
 [project.optional-dependencies]
 # M1.0+ template matching and later OCR preprocessing.
 vision = ["opencv-python-headless>=4.10"]
-# Development helpers for the anchor/template tooling (not needed at runtime).
+# M1.1: PaddleOCR reads stylised CJK text on busy game backgrounds.
+ocr = ["paddlepaddle>=3.0", "paddleocr>=3.0"]
 tools = ["Pillow>=10.0"]
 
 [tool.setuptools]
