@@ -99,8 +99,8 @@ def crop_templates(
             )
         print(f"  {state}: {sum(1 for row in rows if row['state'] == state)} templates")
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / game / "index.json").write_text(
-        json.dumps(rows, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    (OUT / game / "index.json").write_bytes(
+        (json.dumps(rows, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     )
     return rows
 
@@ -127,7 +127,7 @@ def write_config(game: str, rows: list[dict[str, object]]) -> int:
                     lines[index] = replacement
                     changed += 1
             current = None
-    config.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    config.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
     return changed
 
 
