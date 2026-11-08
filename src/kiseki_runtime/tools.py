@@ -63,6 +63,35 @@ def _profile_capture_scale(profile: dict[str, Any]) -> float:
     return 1.0 if value is None else value
 
 
+def _padded_region(definition: dict[str, Any] | None, slack: float = 1.0) -> list[float] | None:
+    """Search box around an anchor's declared region, with proportional slack.
+
+    ``slack=1.0`` doubles the box in both directions (still centred on the
+    anchor), which absorbs a few dozen pixels of UI drift while keeping
+    template matching far cheaper than a full-screen search.
+    """
+
+    if not definition:
+        return None
+    region = definition.get("region")
+    if not isinstance(region, (list, tuple)) or len(region) != 4:
+        return None
+    try:
+        x0, y0, x1, y1 = (float(value) for value in region)
+    except (TypeError, ValueError):
+        return None
+    half_width = (x1 - x0) * slack / 2
+    half_height = (y1 - y0) * slack / 2
+    center_x = (x0 + x1) / 2
+    center_y = (y0 + y1) / 2
+    return [
+        round(max(0.0, center_x - (x1 - x0) / 2 - half_width), 6),
+        round(max(0.0, center_y - (y1 - y0) / 2 - half_height), 6),
+        round(min(1.0, center_x + (x1 - x0) / 2 + half_width), 6),
+        round(min(1.0, center_y + (y1 - y0) / 2 + half_height), 6),
+    ]
+
+
 def _capture_scale(scale: float | None) -> float:
     """Normalize the optional capture scale; reject anything outside 0.25..1.0."""
 
@@ -396,18 +425,21 @@ class Runtime:
         effective_threshold = vision_module.normalize_threshold(
             threshold if threshold is not None else (definition or {}).get("threshold")
         )
+        # Searching the whole 2560x1600 frame costs ~150 ms per match.  An
+        # anchor already declares where it lives, so search a box around that
+        # region (with slack for small UI drift) unless the caller overrides it.
+        search_region = list(region) if region is not None else _padded_region(definition)
         power.keep_awake()
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        frame = self.captures_dir / f"{stamp}-{profile['id']}-locate-{uuid.uuid4().hex[:6]}.png"
-        meta = capture.capture_window_png(int(window["hwnd"]), frame, scale=1.0)
-        try:
-            match = vision_module.match(frame, template_path, effective_threshold, region)
-        finally:
-            try:
-                frame.unlink()
-            except OSError:
-                pass
-        width, height = int(meta["width"]), int(meta["height"])
+        # Capture only the search box: a full 2560x1600 blit costs ~90 ms while a
+        # small region blit costs ~5 ms, and matchTemplate on the small frame is
+        # sub-millisecond.  The offset turns match pixels back into client pixels.
+        frame = capture.capture_window_rgb(int(window["hwnd"]), region=search_region, scale=1.0)
+        match = vision_module.match_rgb(
+            frame["rgb"], int(frame["width"]), int(frame["height"]), template_path,
+            effective_threshold, None,
+        )
+        offset_x, offset_y = (int(value) for value in frame.get("offset", [0, 0]))
+        client_width, client_height = int(frame["client"][2]), int(frame["client"][3])
         result: dict[str, Any] = {
             "ok": True,
             "game_id": profile["id"],
@@ -416,16 +448,23 @@ class Runtime:
             if template_path.is_relative_to(self.root)
             else str(template_path),
             "threshold": effective_threshold,
+            "search_region": search_region,
+            "capture_rect": [offset_x, offset_y, int(frame["width"]), int(frame["height"])],
             "found": match["found"],
             "score": round(float(match["score"]), 4),
-            "window": {"width": width, "height": height},
-            "foreground": bool(meta.get("foreground", capture.is_foreground(int(window["hwnd"])))),
+            "window": {"width": client_width, "height": client_height},
+            "foreground": bool(frame.get("foreground", capture.is_foreground(int(window["hwnd"])))),
         }
         if match["found"] and match["rect"]:
-            rect = match["rect"]
+            rect = [
+                int(match["rect"][0]) + offset_x,
+                int(match["rect"][1]) + offset_y,
+                int(match["rect"][2]),
+                int(match["rect"][3]),
+            ]
             result["rect"] = rect
-            result["normalized_rect"] = vision_module.normalized_rect(rect, width, height)
-            result["normalized_center"] = vision_module.normalized_center(rect, width, height)
+            result["normalized_rect"] = vision_module.normalized_rect(rect, client_width, client_height)
+            result["normalized_center"] = vision_module.normalized_center(rect, client_width, client_height)
             result["hint"] = "click normalized_center with game_act when you trust the score"
         return result
 

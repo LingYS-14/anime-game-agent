@@ -51,6 +51,13 @@ class VisionMatchTests(unittest.TestCase):
         self.assertGreater(result["score"], 0.95)
         self.assertEqual(result["rect"], [PATCH[0], PATCH[1], 32, 24])
 
+    def test_finds_the_patch_on_a_raw_rgb_buffer(self) -> None:
+        frame = cv2.imread(str(self.base), cv2.IMREAD_GRAYSCALE)
+        rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB).tobytes()
+        result = vision.match_rgb(rgb, 320, 240, self.patch, threshold=0.9)
+        self.assertTrue(result["found"])
+        self.assertEqual(result["rect"], [PATCH[0], PATCH[1], 32, 24])
+
     def test_reports_a_miss_when_the_template_is_absent(self) -> None:
         result = vision.match(self.base, self.other, threshold=0.99)
         self.assertFalse(result["found"])

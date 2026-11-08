@@ -18,6 +18,11 @@ from typing import Any, Callable
 
 from ..errors import CaptureError, WindowError
 
+try:  # optional: only used to speed up pixel shuffles when present
+    import numpy as np  # type: ignore
+except ImportError:  # pragma: no cover - the runtime works without numpy too
+    np = None
+
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -357,6 +362,10 @@ def find_window(
 
 
 def _bgra_to_rgb(data: bytes, width: int, height: int) -> bytes:
+    if np is not None:
+        # Fast path: one strided copy instead of ~4M Python loop iterations.
+        frame = np.frombuffer(data, dtype=np.uint8).reshape((height, width, 4))
+        return np.ascontiguousarray(frame[:, :, [2, 1, 0]]).tobytes()
     out = bytearray(width * height * 3)
     source = memoryview(data)
     index = 0
@@ -382,6 +391,9 @@ def _crop_rgb(
     bottom = max(top + 1, int(round(y1 * height)))
     right = min(width, right)
     bottom = min(height, bottom)
+    if np is not None:
+        frame = np.frombuffer(rgb, dtype=np.uint8).reshape((height, width, 3))
+        return np.ascontiguousarray(frame[top:bottom, left:right]).tobytes(), right - left, bottom - top
     rows = [rgb[(top + row) * width * 3 + left * 3 : (top + row) * width * 3 + right * 3] for row in range(bottom - top)]
     return b"".join(rows), right - left, bottom - top
 
@@ -395,6 +407,11 @@ def _scale_rgb(
         return rgb, width, height
     target_width = max(1, round(width * scale))
     target_height = max(1, round(height * scale))
+    if np is not None:
+        frame = np.frombuffer(rgb, dtype=np.uint8).reshape((height, width, 3))
+        rows = (np.arange(target_height) * height // target_height).astype(np.intp)
+        cols = (np.arange(target_width) * width // target_width).astype(np.intp)
+        return np.ascontiguousarray(frame[rows][:, cols]).tobytes(), target_width, target_height
     out = bytearray(target_width * target_height * 3)
     for target_y in range(target_height):
         source_y = min(height - 1, target_y * height // target_height)
@@ -408,6 +425,17 @@ def _scale_rgb(
             out[index + 2] = rgb[offset + 2]
             index += 3
     return bytes(out), target_width, target_height
+
+
+def _normalized_rect(region: list[float] | tuple[float, ...]) -> tuple[float, float, float, float]:
+    """Validate a normalized [x0, y0, x1, y1] region and clamp it to 0..1."""
+
+    if len(region) != 4:
+        raise CaptureError("region must be [x0, y0, x1, y1] normalized to 0..1")
+    x0, y0, x1, y1 = (min(1.0, max(0.0, float(value))) for value in region)
+    if x1 <= x0 or y1 <= y0:
+        raise CaptureError("region is empty after clamping", region=list(region))
+    return x0, y0, x1, y1
 
 
 def _validated_scale(scale: float) -> float:
@@ -450,6 +478,12 @@ def png_bytes(width: int, height: int, rgb: bytes) -> bytes:
 
 
 def _blit_client(hdc_source: wt.HDC, width: int, height: int) -> bytes:
+    return _blit_region(hdc_source, 0, 0, width, height)
+
+
+def _blit_region(hdc_source: wt.HDC, x: int, y: int, width: int, height: int) -> bytes:
+    """Copy a rectangle of ``hdc_source`` into an RGB buffer."""
+
     memory_dc = gdi32.CreateCompatibleDC(hdc_source)
     if not memory_dc:
         raise CaptureError(f"CreateCompatibleDC failed (error {ctypes.get_last_error()})")
@@ -459,7 +493,7 @@ def _blit_client(hdc_source: wt.HDC, width: int, height: int) -> bytes:
         raise CaptureError(f"CreateCompatibleBitmap failed (error {ctypes.get_last_error()})")
     previous = gdi32.SelectObject(memory_dc, bitmap)
     try:
-        if not gdi32.BitBlt(memory_dc, 0, 0, width, height, hdc_source, 0, 0, SRCCOPY):
+        if not gdi32.BitBlt(memory_dc, 0, 0, width, height, hdc_source, int(x), int(y), SRCCOPY):
             raise CaptureError(f"BitBlt failed (error {ctypes.get_last_error()})")
         info = BITMAPINFO()
         info.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
@@ -537,6 +571,110 @@ def _printwindow_rgb(hwnd: int, width: int, height: int) -> bytes:
         user32.ReleaseDC(handle, window_dc)
 
 
+def capture_window_rgb(
+    hwnd: int,
+    region: list[float] | tuple[float, ...] | None = None,
+    scale: float = 1.0,
+    prefer_screen: bool | None = None,
+) -> dict[str, Any]:
+    """Capture the client area of ``hwnd`` into a raw RGB buffer (no PNG).
+
+    Same backends as :func:`capture_window_png`; returns the pixels in
+    ``rgb`` plus the ``width``/``height`` they were captured with, so callers
+    that need the frame for analysis (template matching) skip the PNG
+    encode/decode round-trip entirely.
+    """
+
+    scale = _validated_scale(scale)
+    enable_dpi_awareness()
+    info = window_info(int(hwnd))
+    left, top, width, height = info["client"]
+    client_width, client_height = width, height
+    if width <= 0 or height <= 0:
+        raise CaptureError("window has an empty client area", hwnd=hwnd)
+    foreground = is_foreground(int(hwnd))
+    use_screen = foreground if prefer_screen is None else bool(prefer_screen)
+    cropped = False
+    offset = [0, 0]
+    if use_screen:
+        if region:
+            # Blit only the requested rectangle from the screen: a full-screen
+            # copy plus a Python-side crop costs ~80 ms, this costs ~5 ms.
+            x0, y0, x1, y1 = _normalized_rect(region)
+            px = int(round(x0 * width))
+            py = int(round(y0 * height))
+            right = max(px + 1, min(width, int(round(x1 * width))))
+            bottom = max(py + 1, min(height, int(round(y1 * height))))
+            region_w, region_h = right - px, bottom - py
+            screen_w = int(user32.GetSystemMetrics(0))
+            screen_h = int(user32.GetSystemMetrics(1))
+            if left + px < 0 or top + py < 0 or left + right > screen_w or top + bottom > screen_h:
+                raise CaptureError(
+                    "window client area is outside the primary screen",
+                    hwnd=int(hwnd),
+                    client=[left, top, width, height],
+                    screen=[screen_w, screen_h],
+                )
+            screen_dc = user32.GetDC(None)
+            if not screen_dc:
+                raise CaptureError(f"GetDC(desktop) failed (error {ctypes.get_last_error()})")
+            try:
+                rgb = _blit_region(screen_dc, left + px, top + py, region_w, region_h)
+            finally:
+                user32.ReleaseDC(None, screen_dc)
+            width, height = region_w, region_h
+            offset = [px, py]
+            cropped = True
+        else:
+            screen_w, screen_h, screen = _screen_rgb()
+            if left < 0 or top < 0 or left + width > screen_w or top + height > screen_h:
+                raise CaptureError(
+                    "window client area is outside the primary screen",
+                    hwnd=int(hwnd),
+                    client=[left, top, width, height],
+                    screen=[screen_w, screen_h],
+                )
+            if np is not None:
+                frame = np.frombuffer(screen, dtype=np.uint8).reshape((screen_h, screen_w, 3))
+                rgb = np.ascontiguousarray(frame[top : top + height, left : left + width]).tobytes()
+            else:
+                rows = [
+                    screen[(top + row) * screen_w * 3 + left * 3 : (top + row) * screen_w * 3 + (left + width) * 3]
+                    for row in range(height)
+                ]
+                rgb = b"".join(rows)
+        backend = "screen"
+    else:
+        try:
+            rgb = _printwindow_rgb(int(hwnd), width, height)
+            backend = "printwindow"
+        except CaptureError:
+            handle = wt.HWND(int(hwnd))
+            hdc = user32.GetDC(handle)
+            if not hdc:
+                raise CaptureError(f"GetDC failed (error {ctypes.get_last_error()})", hwnd=hwnd)
+            try:
+                rgb = _blit_client(hdc, width, height)
+            finally:
+                user32.ReleaseDC(handle, hdc)
+            backend = "window-dc"
+    if region and not cropped:
+        rgb, width, height = _crop_rgb(rgb, width, height, region)
+    rgb, width, height = _scale_rgb(rgb, width, height, scale)
+    return {
+        "rgb": rgb,
+        "width": width,
+        "height": height,
+        "scale": scale,
+        "hwnd": int(hwnd),
+        "client": [left, top, client_width, client_height],
+        "region": list(region) if region else None,
+        "offset": offset,
+        "backend": backend,
+        "foreground": foreground,
+    }
+
+
 def capture_window_png(
     hwnd: int,
     path: str | Path,
@@ -555,61 +693,13 @@ def capture_window_png(
     sampling; the returned ``width``/``height`` are the scaled pixel sizes.
     """
 
-    scale = _validated_scale(scale)
-    enable_dpi_awareness()
-    info = window_info(int(hwnd))
-    left, top, width, height = info["client"]
-    client_width, client_height = width, height
-    if width <= 0 or height <= 0:
-        raise CaptureError("window has an empty client area", hwnd=hwnd)
-    foreground = is_foreground(int(hwnd))
-    use_screen = foreground if prefer_screen is None else bool(prefer_screen)
-    if use_screen:
-        screen_w, screen_h, screen = _screen_rgb()
-        if left < 0 or top < 0 or left + width > screen_w or top + height > screen_h:
-            raise CaptureError(
-                "window client area is outside the primary screen",
-                hwnd=int(hwnd),
-                client=[left, top, width, height],
-                screen=[screen_w, screen_h],
-            )
-        rows = [
-            screen[(top + row) * screen_w * 3 + left * 3 : (top + row) * screen_w * 3 + (left + width) * 3]
-            for row in range(height)
-        ]
-        rgb = b"".join(rows)
-        backend = "screen"
-    else:
-        try:
-            rgb = _printwindow_rgb(int(hwnd), width, height)
-            backend = "printwindow"
-        except CaptureError:
-            handle = wt.HWND(int(hwnd))
-            hdc = user32.GetDC(handle)
-            if not hdc:
-                raise CaptureError(f"GetDC failed (error {ctypes.get_last_error()})", hwnd=hwnd)
-            try:
-                rgb = _blit_client(hdc, width, height)
-            finally:
-                user32.ReleaseDC(handle, hdc)
-            backend = "window-dc"
-    if region:
-        rgb, width, height = _crop_rgb(rgb, width, height, region)
-    rgb, width, height = _scale_rgb(rgb, width, height, scale)
+    frame = capture_window_rgb(hwnd, region=region, scale=scale, prefer_screen=prefer_screen)
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(png_bytes(width, height, rgb))
-    return {
-        "path": str(target),
-        "width": width,
-        "height": height,
-        "scale": scale,
-        "hwnd": int(hwnd),
-        "client": [left, top, client_width, client_height],
-        "region": list(region) if region else None,
-        "backend": backend,
-        "foreground": foreground,
-    }
+    target.write_bytes(png_bytes(frame["width"], frame["height"], frame["rgb"]))
+    payload = {key: value for key, value in frame.items() if key != "rgb"}
+    payload["path"] = str(target)
+    return payload
 
 
 def capture_screen_png(

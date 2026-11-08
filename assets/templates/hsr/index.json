@@ -1,0 +1,658 @@
+[
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_phone",
+    "path": "assets/templates/hsr/ingame/hud_phone.png",
+    "size": [
+      72,
+      60
+    ],
+    "region": [
+      0.685,
+      0.025,
+      0.713,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_toprow_2",
+    "path": "assets/templates/hsr/ingame/hud_toprow_2.png",
+    "size": [
+      72,
+      60
+    ],
+    "region": [
+      0.731,
+      0.025,
+      0.759,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_toprow_3",
+    "path": "assets/templates/hsr/ingame/hud_toprow_3.png",
+    "size": [
+      71,
+      60
+    ],
+    "region": [
+      0.768,
+      0.025,
+      0.796,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_toprow_4",
+    "path": "assets/templates/hsr/ingame/hud_toprow_4.png",
+    "size": [
+      71,
+      60
+    ],
+    "region": [
+      0.811,
+      0.025,
+      0.839,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_toprow_5",
+    "path": "assets/templates/hsr/ingame/hud_toprow_5.png",
+    "size": [
+      72,
+      60
+    ],
+    "region": [
+      0.856,
+      0.025,
+      0.884,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_toprow_6",
+    "path": "assets/templates/hsr/ingame/hud_toprow_6.png",
+    "size": [
+      72,
+      60
+    ],
+    "region": [
+      0.899,
+      0.025,
+      0.927,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_avatar",
+    "path": "assets/templates/hsr/ingame/hud_avatar.png",
+    "size": [
+      71,
+      60
+    ],
+    "region": [
+      0.945,
+      0.025,
+      0.973,
+      0.063
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_tasks",
+    "path": "assets/templates/hsr/ingame/hud_tasks.png",
+    "size": [
+      49,
+      56
+    ],
+    "region": [
+      0.016,
+      0.034,
+      0.035,
+      0.069
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_lightbulb",
+    "path": "assets/templates/hsr/ingame/hud_lightbulb.png",
+    "size": [
+      69,
+      55
+    ],
+    "region": [
+      0.112,
+      0.036,
+      0.139,
+      0.07
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_minimap",
+    "path": "assets/templates/hsr/ingame/hud_minimap.png",
+    "size": [
+      261,
+      261
+    ],
+    "region": [
+      0.022,
+      0.053,
+      0.124,
+      0.216
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_notebook",
+    "path": "assets/templates/hsr/ingame/hud_notebook.png",
+    "size": [
+      49,
+      71
+    ],
+    "region": [
+      0.016,
+      0.178,
+      0.035,
+      0.222
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_chat",
+    "path": "assets/templates/hsr/ingame/hud_chat.png",
+    "size": [
+      52,
+      57
+    ],
+    "region": [
+      0.014,
+      0.885,
+      0.034,
+      0.921
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "ingame",
+    "id": "hud_sprint",
+    "path": "assets/templates/hsr/ingame/hud_sprint.png",
+    "size": [
+      80,
+      85
+    ],
+    "region": [
+      0.916,
+      0.889,
+      0.947,
+      0.942
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_store",
+    "path": "assets/templates/hsr/phone/phone_store.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.264,
+      0.709,
+      0.332
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_friends",
+    "path": "assets/templates/hsr/phone/phone_friends.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.264,
+      0.77,
+      0.332
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_commission",
+    "path": "assets/templates/hsr/phone/phone_commission.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.779,
+      0.264,
+      0.831,
+      0.332
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_achievement",
+    "path": "assets/templates/hsr/phone/phone_achievement.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.84,
+      0.264,
+      0.892,
+      0.332
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_diary",
+    "path": "assets/templates/hsr/phone/phone_diary.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.378,
+      0.709,
+      0.446
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_synthesis",
+    "path": "assets/templates/hsr/phone/phone_synthesis.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.378,
+      0.77,
+      0.446
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_mail",
+    "path": "assets/templates/hsr/phone/phone_mail.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.493,
+      0.709,
+      0.561
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_honor",
+    "path": "assets/templates/hsr/phone/phone_honor.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.493,
+      0.77,
+      0.561
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_warp",
+    "path": "assets/templates/hsr/phone/phone_warp.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.779,
+      0.493,
+      0.831,
+      0.561
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_role",
+    "path": "assets/templates/hsr/phone/phone_role.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.84,
+      0.493,
+      0.892,
+      0.561
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_guide",
+    "path": "assets/templates/hsr/phone/phone_guide.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.607,
+      0.709,
+      0.675
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_multiplayer",
+    "path": "assets/templates/hsr/phone/phone_multiplayer.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.607,
+      0.77,
+      0.675
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_nav",
+    "path": "assets/templates/hsr/phone/phone_nav.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.779,
+      0.607,
+      0.831,
+      0.675
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_tutorial",
+    "path": "assets/templates/hsr/phone/phone_tutorial.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.84,
+      0.607,
+      0.892,
+      0.675
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_team",
+    "path": "assets/templates/hsr/phone/phone_team.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.721,
+      0.709,
+      0.789
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_backpack",
+    "path": "assets/templates/hsr/phone/phone_backpack.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.721,
+      0.77,
+      0.789
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_tasks",
+    "path": "assets/templates/hsr/phone/phone_tasks.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.779,
+      0.721,
+      0.831,
+      0.789
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_tools",
+    "path": "assets/templates/hsr/phone/phone_tools.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.84,
+      0.721,
+      0.892,
+      0.789
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_feedback",
+    "path": "assets/templates/hsr/phone/phone_feedback.png",
+    "size": [
+      134,
+      109
+    ],
+    "region": [
+      0.657,
+      0.836,
+      0.709,
+      0.904
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_knowledge",
+    "path": "assets/templates/hsr/phone/phone_knowledge.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.718,
+      0.836,
+      0.77,
+      0.904
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_bookshelf",
+    "path": "assets/templates/hsr/phone/phone_bookshelf.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.779,
+      0.836,
+      0.831,
+      0.904
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_hot",
+    "path": "assets/templates/hsr/phone/phone_hot.png",
+    "size": [
+      133,
+      109
+    ],
+    "region": [
+      0.84,
+      0.836,
+      0.892,
+      0.904
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "phone",
+    "id": "phone_close",
+    "path": "assets/templates/hsr/phone/phone_close.png",
+    "size": [
+      138,
+      80
+    ],
+    "region": [
+      0.938,
+      0.012,
+      0.992,
+      0.062
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "map",
+    "id": "map_close",
+    "path": "assets/templates/hsr/map/map_close.png",
+    "size": [
+      123,
+      96
+    ],
+    "region": [
+      0.942,
+      0.018,
+      0.99,
+      0.078
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "map",
+    "id": "map_tab_party",
+    "path": "assets/templates/hsr/map/map_tab_party.png",
+    "size": [
+      269,
+      96
+    ],
+    "region": [
+      0.108,
+      0.105,
+      0.213,
+      0.165
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "map",
+    "id": "map_tab_view",
+    "path": "assets/templates/hsr/map/map_tab_view.png",
+    "size": [
+      238,
+      96
+    ],
+    "region": [
+      0.222,
+      0.105,
+      0.315,
+      0.165
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "map",
+    "id": "map_star_rail",
+    "path": "assets/templates/hsr/map/map_star_rail.png",
+    "size": [
+      461,
+      80
+    ],
+    "region": [
+      0.795,
+      0.115,
+      0.975,
+      0.165
+    ]
+  },
+  {
+    "game": "hsr",
+    "state": "map",
+    "id": "map_level_1",
+    "path": "assets/templates/hsr/map/map_level_1.png",
+    "size": [
+      103,
+      176
+    ],
+    "region": [
+      0.012,
+      0.835,
+      0.052,
+      0.945
+    ]
+  }
+]

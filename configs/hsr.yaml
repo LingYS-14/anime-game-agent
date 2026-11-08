@@ -49,207 +49,207 @@ ui:
       threshold: 0.85
       note: 标题画面底部「点击进入」，2026-11-08 实机校准（点击中心 0.5/0.945 可进入，黑屏加载约 30 s）
     - id: hud_phone
-      template: null
+      template: assets/templates/hsr/ingame/hud_phone.png
       region: [0.685, 0.025, 0.713, 0.063]
       threshold: 0.85
       note: 右上角一排 7 个图标的最左一个；实测点击它不会打开手机菜单（疑似公告/活动入口），手机菜单用 Esc 打开，2026-11-08 实机校准
     - id: hud_toprow_2
-      template: null
+      template: assets/templates/hsr/ingame/hud_toprow_2.png
       region: [0.731, 0.025, 0.759, 0.063]
       threshold: 0.85
       note: 右上角一排第 2 个图标（功能待确认）
     - id: hud_toprow_3
-      template: null
+      template: assets/templates/hsr/ingame/hud_toprow_3.png
       region: [0.768, 0.025, 0.796, 0.063]
       threshold: 0.85
       note: 右上角一排第 3 个图标（功能待确认）
     - id: hud_toprow_4
-      template: null
+      template: assets/templates/hsr/ingame/hud_toprow_4.png
       region: [0.811, 0.025, 0.839, 0.063]
       threshold: 0.85
       note: 右上角一排第 4 个图标（功能待确认）
     - id: hud_toprow_5
-      template: null
+      template: assets/templates/hsr/ingame/hud_toprow_5.png
       region: [0.856, 0.025, 0.884, 0.063]
       threshold: 0.85
       note: 右上角一排第 5 个图标（功能待确认）
     - id: hud_toprow_6
-      template: null
+      template: assets/templates/hsr/ingame/hud_toprow_6.png
       region: [0.899, 0.025, 0.927, 0.063]
       threshold: 0.85
       note: 右上角一排第 6 个图标（功能待确认）
     - id: hud_avatar
-      template: null
+      template: assets/templates/hsr/ingame/hud_avatar.png
       region: [0.945, 0.025, 0.973, 0.063]
       threshold: 0.85
       note: 右上角最右的头像/角色入口，2026-11-08 实机校准
     - id: hud_tasks
-      template: null
+      template: assets/templates/hsr/ingame/hud_tasks.png
       region: [0.016, 0.034, 0.035, 0.069]
       threshold: 0.85
       note: 左上角（小地图上方）带红点的任务/手机图标，2026-11-08 实机校准
     - id: hud_lightbulb
-      template: null
+      template: assets/templates/hsr/ingame/hud_lightbulb.png
       region: [0.112, 0.036, 0.139, 0.070]
       threshold: 0.85
       note: 左上角小地图右侧的灯泡（提示/攻略）图标，2026-11-08 实机校准
     - id: hud_minimap
-      template: null
+      template: assets/templates/hsr/ingame/hud_minimap.png
       region: [0.022, 0.053, 0.124, 0.216]
       threshold: 0.85
       note: 左上角圆形小地图整块（可用于判断「是否在游戏内」），2026-11-08 实机校准
     - id: hud_notebook
-      template: null
+      template: assets/templates/hsr/ingame/hud_notebook.png
       region: [0.016, 0.178, 0.035, 0.222]
       threshold: 0.85
       note: 小地图左侧下方的笔记本/任务图标，2026-11-08 实机校准
     - id: hud_chat
-      template: null
+      template: assets/templates/hsr/ingame/hud_chat.png
       region: [0.014, 0.885, 0.034, 0.921]
       threshold: 0.85
       note: 左下角「Enter」聊天入口，2026-11-08 实机校准
     - id: hud_sprint
-      template: null
+      template: assets/templates/hsr/ingame/hud_sprint.png
       region: [0.916, 0.889, 0.947, 0.942]
       threshold: 0.85
       note: 右下角冲刺/疾跑按钮，2026-11-08 实机校准
     - id: phone_store
-      template: null
+      template: assets/templates/hsr/phone/phone_store.png
       region: [0.657, 0.264, 0.709, 0.332]
       threshold: 0.85
       note: 手机 UI「商店」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_friends
-      template: null
+      template: assets/templates/hsr/phone/phone_friends.png
       region: [0.718, 0.264, 0.770, 0.332]
       threshold: 0.85
       note: 手机 UI「好友」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_commission
-      template: null
+      template: assets/templates/hsr/phone/phone_commission.png
       region: [0.779, 0.264, 0.831, 0.332]
       threshold: 0.85
       note: 手机 UI「委托」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_achievement
-      template: null
+      template: assets/templates/hsr/phone/phone_achievement.png
       region: [0.840, 0.264, 0.892, 0.332]
       threshold: 0.85
       note: 手机 UI「成就」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_diary
-      template: null
+      template: assets/templates/hsr/phone/phone_diary.png
       region: [0.657, 0.378, 0.709, 0.446]
       threshold: 0.85
       note: 手机 UI「旅情事记」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_synthesis
-      template: null
+      template: assets/templates/hsr/phone/phone_synthesis.png
       region: [0.718, 0.378, 0.770, 0.446]
       threshold: 0.85
       note: 手机 UI「合成」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_mail
-      template: null
+      template: assets/templates/hsr/phone/phone_mail.png
       region: [0.657, 0.493, 0.709, 0.561]
       threshold: 0.85
       note: 手机 UI「短信」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_honor
-      template: null
+      template: assets/templates/hsr/phone/phone_honor.png
       region: [0.718, 0.493, 0.770, 0.561]
       threshold: 0.85
       note: 手机 UI「无名勋礼」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_warp
-      template: null
+      template: assets/templates/hsr/phone/phone_warp.png
       region: [0.779, 0.493, 0.831, 0.561]
       threshold: 0.85
       note: 手机 UI「跃迁」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_role
-      template: null
+      template: assets/templates/hsr/phone/phone_role.png
       region: [0.840, 0.493, 0.892, 0.561]
       threshold: 0.85
       note: 手机 UI「角色」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_guide
-      template: null
+      template: assets/templates/hsr/phone/phone_guide.png
       region: [0.657, 0.607, 0.709, 0.675]
       threshold: 0.85
       note: 手机 UI「指南」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_multiplayer
-      template: null
+      template: assets/templates/hsr/phone/phone_multiplayer.png
       region: [0.718, 0.607, 0.770, 0.675]
       threshold: 0.85
       note: 手机 UI「联机玩法」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_nav
-      template: null
+      template: assets/templates/hsr/phone/phone_nav.png
       region: [0.779, 0.607, 0.831, 0.675]
       threshold: 0.85
       note: 手机 UI「导航」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_tutorial
-      template: null
+      template: assets/templates/hsr/phone/phone_tutorial.png
       region: [0.840, 0.607, 0.892, 0.675]
       threshold: 0.85
       note: 手机 UI「教学目录」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_team
-      template: null
+      template: assets/templates/hsr/phone/phone_team.png
       region: [0.657, 0.721, 0.709, 0.789]
       threshold: 0.85
       note: 手机 UI「编队」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_backpack
-      template: null
+      template: assets/templates/hsr/phone/phone_backpack.png
       region: [0.718, 0.721, 0.770, 0.789]
       threshold: 0.85
       note: 手机 UI「背包」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_tasks
-      template: null
+      template: assets/templates/hsr/phone/phone_tasks.png
       region: [0.779, 0.721, 0.831, 0.789]
       threshold: 0.85
       note: 手机 UI「任务」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_tools
-      template: null
+      template: assets/templates/hsr/phone/phone_tools.png
       region: [0.840, 0.721, 0.892, 0.789]
       threshold: 0.85
       note: 手机 UI「游戏工具」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_feedback
-      template: null
+      template: assets/templates/hsr/phone/phone_feedback.png
       region: [0.657, 0.836, 0.709, 0.904]
       threshold: 0.85
       note: 手机 UI「问题反馈」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_knowledge
-      template: null
+      template: assets/templates/hsr/phone/phone_knowledge.png
       region: [0.718, 0.836, 0.770, 0.904]
       threshold: 0.85
       note: 手机 UI「智库」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_bookshelf
-      template: null
+      template: assets/templates/hsr/phone/phone_bookshelf.png
       region: [0.779, 0.836, 0.831, 0.904]
       threshold: 0.85
       note: 手机 UI「书架」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_hot
-      template: null
+      template: assets/templates/hsr/phone/phone_hot.png
       region: [0.840, 0.836, 0.892, 0.904]
       threshold: 0.85
       note: 手机 UI「版本热点」图标（四列网格，2026-11-08 实机逐格校准）
     - id: phone_close
-      template: null
+      template: assets/templates/hsr/phone/phone_close.png
       region: [0.938, 0.012, 0.992, 0.062]
       threshold: 0.85
       note: 手机 UI 右上角关闭 X（短信等子面板同位置），2026-11-08 实机校准
     - id: map_close
-      template: null
+      template: assets/templates/hsr/map/map_close.png
       region: [0.942, 0.018, 0.990, 0.078]
       threshold: 0.85
       note: 地图/导航界面右上角关闭 X（2026-11-08 实机校准）
     - id: map_tab_party
-      template: null
+      template: assets/templates/hsr/map/map_tab_party.png
       region: [0.108, 0.105, 0.213, 0.165]
       threshold: 0.85
       note: 地图顶栏「派对车厢」标签页（2026-11-08 实机校准）
     - id: map_tab_view
-      template: null
+      template: assets/templates/hsr/map/map_tab_view.png
       region: [0.222, 0.105, 0.315, 0.165]
       threshold: 0.85
       note: 地图顶栏「观景车厢」标签页（2026-11-08 实机校准）
     - id: map_star_rail
-      template: null
+      template: assets/templates/hsr/map/map_star_rail.png
       region: [0.795, 0.115, 0.975, 0.165]
       threshold: 0.85
       note: 地图右侧「星轨航图」入口按钮（2026-11-08 实机校准）
     - id: map_level_1
-      template: null
+      template: assets/templates/hsr/map/map_level_1.png
       region: [0.012, 0.835, 0.052, 0.945]
       threshold: 0.85
       note: 地图左下角楼层切换「1层/2层」（2026-11-08 实机校准）

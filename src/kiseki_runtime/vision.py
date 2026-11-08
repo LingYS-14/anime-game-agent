@@ -91,6 +91,51 @@ def match(
             code_hint="CAPTURE_UNREADABLE",
             path=str(screenshot),
         )
+    return _match_gray(haystack, template, threshold=threshold, region=region)
+
+
+def match_rgb(
+    rgb: bytes,
+    width: int,
+    height: int,
+    template: str | Path,
+    threshold: float = 0.9,
+    region: Sequence[float] | None = None,
+) -> dict[str, Any]:
+    """Like :func:`match`, but on an in-memory RGB buffer (no PNG round-trip).
+
+    ``game_locate`` uses this path: capturing to memory and matching directly is
+    roughly 10x faster than writing/reading a full-screen PNG.
+    """
+
+    require()
+    cv = cv2
+    npmod = np
+
+    expected = width * height * 3
+    if len(rgb) != expected:
+        raise KisekiError(
+            "raw frame buffer does not match its declared size",
+            code_hint="CAPTURE_UNREADABLE",
+            expected=expected,
+            actual=len(rgb),
+            size=[width, height],
+        )
+    frame = npmod.frombuffer(rgb, dtype=npmod.uint8).reshape((height, width, 3))
+    gray = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
+    return _match_gray(gray, template, threshold=threshold, region=region)
+
+
+def _match_gray(
+    haystack: Any,
+    template: str | Path,
+    threshold: float = 0.9,
+    region: Sequence[float] | None = None,
+) -> dict[str, Any]:
+    """Shared matching core; ``haystack`` is a grayscale ndarray."""
+
+    cv = cv2
+
     needle = cv.imread(str(template), cv.IMREAD_GRAYSCALE)
     if needle is None:
         raise KisekiError(
@@ -187,6 +232,7 @@ __all__ = [
     "available",
     "require",
     "match",
+    "match_rgb",
     "normalized_center",
     "normalized_rect",
     "normalize_threshold",

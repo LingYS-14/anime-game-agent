@@ -46,9 +46,9 @@ def grab_states(runtime: Runtime, game: str) -> dict[str, Path]:
         screens[state] = ROOT / shot["relative_path"]
         print(f"  captured {state}: {shot['relative_path']} {shot['width']}x{shot['height']}")
 
-    for _ in range(3):
-        runtime.game_skill(game, "close_panel", dry_run=False)
-        time.sleep(0.6)
+    # The game must start from the normal in-game HUD (no panel open): a single
+    # Esc toggles the phone, so we capture ingame first and only toggle panel
+    # states afterwards.
     grab("ingame")
 
     runtime.game_skill(game, "phone_open", dry_run=False)
