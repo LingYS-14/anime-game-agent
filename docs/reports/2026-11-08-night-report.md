@@ -104,7 +104,7 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通并�
 ## 7. 合规与风险
 
 - 未读取游戏内存、未注入 DLL、未绕过 ACE/反作弊；只做窗口截图与合法 SendInput。
-- 只使用小号（UID 107760946 / 165165603），未进行付费、抽卡、删除类操作。
+- 只使用小号（UID <redacted-uid> / <redacted-uid>），未进行付费、抽卡、删除类操作。
 - 游戏自动化可能违反 ToS，风险由使用者承担；本仓库默认 `dry_run: true`。
 
 ## 8. 04:15 更新：三个 superagent PR 已合并并验证
@@ -140,8 +140,8 @@ M0 阶段「superagent 写代码 + 我验证/合并」的分工成立，可在 M
 | --- | --- |
 | 仓库 | main 与 origin/main 同步于 376475c，工作区干净 |
 | 单测 | 34 个全部通过（本地） |
-| 星铁 | 仍在运行（pid 11312，派对车厢，UID 107760946） |
-| 终末地 | 仍在运行（pid 35928，只读副驾，UID 165165603） |
+| 星铁 | 仍在运行（pid 11312，派对车厢，UID <redacted-uid>） |
+| 终末地 | 仍在运行（pid 35928，只读副驾，UID <redacted-uid>） |
 | superagent | 服务 eady，github eady，manually_stopped=false，无异常工单 |
 | 保持唤醒 | keep_awake.py 计划 3 小时（至约 07:21），之后系统可正常休眠 |
 | 截图 | captures/ 下保留本轮全部证据；docs/anchors/hsr/ 有 41 个锚点裁图 |

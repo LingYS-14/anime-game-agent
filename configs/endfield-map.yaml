@@ -7,7 +7,7 @@ notes: >-
   M0 只做窗口定位与截图；地图理解（识别当前区域、路径规划）属于 M2，game_map 现在返回 NOT_IMPLEMENTED。
   2026-11-08 实机：直接运行 Endfield.exe 会弹「请通过官方启动器打开游戏」，必须经鹰角启动器
   C:\Hypergryph Launcher\launcher.exe 点「开始游戏」；启动器可执行文件是 Games.exe，窗口标题「鹰角启动器」。
-  实机窗口：title=Endfield、class=UnityWndClass、client 2560x1600、dpi 120；进入后自动使用本机保存的账号（UID 165165603）。
+  实机窗口：title=Endfield、class=UnityWndClass、client 2560x1600、dpi 120；进入后自动使用本机保存的账号（UID <redacted-uid>）。
   重要发现：游戏内合成输入（SendInput 的 ESC / W / F / 点击右上图标）均无响应——ACE 反作弊（AntiCheatExpert）
   过滤或忽略注入输入；同一输入方式在星铁可用。按合规底线不尝试绕过 ACE，终末地只走「只读副驾」路线
   （截图 + 识别 + 提示，由人执行），因此本 profile 的 skills/tasks 不用于真实代打。

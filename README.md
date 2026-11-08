@@ -116,7 +116,7 @@ python scripts/smoke.py hsr --capture
 ```
 
 ```yaml
-# 4) 在 C:\Users\ganch\.dsh\profiles\desktop\cordis.patch.yml 的 insert: 下加
+# 4) 在 <HOME>\.dsh\profiles\desktop\cordis.patch.yml 的 insert: 下加
 - id: mcp-kiseki
   name: '@deepseek-ai/dsh-mcp-client'
   serverName: kiseki

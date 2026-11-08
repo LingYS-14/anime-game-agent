@@ -40,7 +40,7 @@ DSH 现在没有截屏、鼠标、键盘工具，也没有本地模型 provider�
 
 **关键结论**：DSH 的缺口只有一个——没有“游戏 I/O”。这个缺口不需要改 DSH 内核，用 MCP server 补即可；这也意味着项目不再是“做一个 Agent 框架”，而是“给 DSH 接一套游戏运行时”。
 
-DSH 的 profile 由 Electron 管理，不能直接 `dsh --profile desktop --dump-config`；新增 MCP 条目要写进 `C:\Users\ganch\.dsh\profiles\desktop\cordis.patch.yml` 的 `insert:` 下，然后重启 DSH。示例：
+DSH 的 profile 由 Electron 管理，不能直接 `dsh --profile desktop --dump-config`；新增 MCP 条目要写进 `<HOME>\.dsh\profiles\desktop\cordis.patch.yml` 的 `insert:` 下，然后重启 DSH。示例：
 
 ```yaml
 - insert:
