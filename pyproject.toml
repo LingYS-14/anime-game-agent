@@ -20,6 +20,12 @@ classifiers = [
 [project.scripts]
 kiseki-runtime = "kiseki_runtime.mcp_server:main"
 
+[project.optional-dependencies]
+# M1.0+ template matching and later OCR preprocessing.
+vision = ["opencv-python-headless>=4.10"]
+# Development helpers for the anchor/template tooling (not needed at runtime).
+tools = ["Pillow>=10.0"]
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 

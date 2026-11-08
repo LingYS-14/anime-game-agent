@@ -17,6 +17,7 @@ from typing import Any
 from . import actions as action_module
 from . import estop as estop_module
 from . import profiles as profile_module
+from . import vision as vision_module
 from .errors import (
     EmergencyStopError,
     KisekiError,
@@ -40,6 +41,8 @@ TOOL_NAMES = [
     "game_state",
     "game_act",
     "game_skill",
+    "game_locate",
+    "game_wait_for",
     "game_status",
     "game_map",
     "game_stop",
@@ -332,6 +335,157 @@ class Runtime:
         result = self.game_act(game_id, declared, dry_run=dry_run)
         result["skill"] = skill
         return result
+
+    # -- vision (M1.0) -----------------------------------------------------
+    def _resolve_template(
+        self,
+        profile: dict[str, Any],
+        anchor: str | None,
+        template: str | None,
+    ) -> tuple[Path, dict[str, Any] | None]:
+        definition = None
+        if anchor:
+            definition = profile_module.anchors(profile).get(anchor)
+            if definition is None:
+                raise PolicyError(
+                    f"anchor {anchor!r} is not declared by profile {profile['id']!r}",
+                    code_hint="UNKNOWN_ANCHOR",
+                    anchor=anchor,
+                )
+            if template is None:
+                template = definition.get("template")
+        if not template:
+            raise KisekiError(
+                "no template configured for this anchor; set ui.anchors[].template "
+                "in the profile (or pass template explicitly)",
+                code_hint="TEMPLATE_MISSING",
+                anchor=anchor,
+                hint="run scripts/build_templates.py to generate assets/templates",
+            )
+        path = Path(template)
+        if not path.is_absolute():
+            path = self.root / path
+        if not path.is_file():
+            raise KisekiError(
+                "template file not found",
+                code_hint="TEMPLATE_MISSING",
+                template=str(template),
+                path=str(path),
+            )
+        return path, definition
+
+    def game_locate(
+        self,
+        game_id: str | None = None,
+        anchor: str | None = None,
+        template: str | None = None,
+        region: list[float] | None = None,
+        threshold: float | None = None,
+    ) -> dict[str, Any]:
+        """Find the configured template of ``anchor`` on the current frame."""
+
+        vision_module.require()
+        if not anchor and not template:
+            raise KisekiError(
+                "game_locate needs an anchor id or a template path",
+                code_hint="TEMPLATE_MISSING",
+            )
+        profile = self.profile(game_id) if game_id else self._only_focused_profile()
+        window = self._focused_window(profile)
+        template_path, definition = self._resolve_template(profile, anchor, template)
+        effective_threshold = vision_module.normalize_threshold(
+            threshold if threshold is not None else (definition or {}).get("threshold")
+        )
+        power.keep_awake()
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        frame = self.captures_dir / f"{stamp}-{profile['id']}-locate-{uuid.uuid4().hex[:6]}.png"
+        meta = capture.capture_window_png(int(window["hwnd"]), frame, scale=1.0)
+        try:
+            match = vision_module.match(frame, template_path, effective_threshold, region)
+        finally:
+            try:
+                frame.unlink()
+            except OSError:
+                pass
+        width, height = int(meta["width"]), int(meta["height"])
+        result: dict[str, Any] = {
+            "ok": True,
+            "game_id": profile["id"],
+            "anchor": anchor,
+            "template": str(template_path.relative_to(self.root)).replace("\\", "/")
+            if template_path.is_relative_to(self.root)
+            else str(template_path),
+            "threshold": effective_threshold,
+            "found": match["found"],
+            "score": round(float(match["score"]), 4),
+            "window": {"width": width, "height": height},
+            "foreground": bool(meta.get("foreground", capture.is_foreground(int(window["hwnd"])))),
+        }
+        if match["found"] and match["rect"]:
+            rect = match["rect"]
+            result["rect"] = rect
+            result["normalized_rect"] = vision_module.normalized_rect(rect, width, height)
+            result["normalized_center"] = vision_module.normalized_center(rect, width, height)
+            result["hint"] = "click normalized_center with game_act when you trust the score"
+        return result
+
+    def game_wait_for(
+        self,
+        game_id: str | None = None,
+        anchor: str | None = None,
+        template: str | None = None,
+        timeout: float = 10.0,
+        interval: float = 0.3,
+        threshold: float | None = None,
+    ) -> dict[str, Any]:
+        """Poll ``game_locate`` until the anchor appears or ``timeout`` expires."""
+
+        vision_module.require()
+        try:
+            timeout_s = float(timeout)
+            interval_s = float(interval)
+        except (TypeError, ValueError):
+            raise KisekiError(
+                "timeout and interval must be numbers",
+                code_hint="INVALID_ARGUMENT",
+                timeout=str(timeout),
+                interval=str(interval),
+            ) from None
+        if timeout_s <= 0:
+            raise KisekiError(
+                "timeout must be positive", code_hint="INVALID_ARGUMENT", timeout=timeout_s
+            )
+        interval_s = max(0.05, min(interval_s, timeout_s))
+        deadline = time.monotonic() + timeout_s
+        attempts = 0
+        last_score = 0.0
+        while True:
+            attempts += 1
+            try:
+                result = self.game_locate(
+                    game_id=game_id,
+                    anchor=anchor,
+                    template=template,
+                    threshold=threshold,
+                )
+            except KisekiError:
+                raise
+            last_score = float(result["score"])
+            if result["found"]:
+                result["attempts"] = attempts
+                result["waited_s"] = round(timeout_s - max(0.0, deadline - time.monotonic()), 2)
+                return result
+            if time.monotonic() >= deadline:
+                raise KisekiError(
+                    f"anchor {anchor or template!r} did not appear within {timeout_s:.1f}s",
+                    code_hint="ANCHOR_NOT_FOUND",
+                    anchor=anchor,
+                    template=template,
+                    attempts=attempts,
+                    last_score=round(last_score, 4),
+                    threshold=result["threshold"],
+                )
+            time.sleep(interval_s)
 
     def game_status(self) -> dict[str, Any]:
         return {

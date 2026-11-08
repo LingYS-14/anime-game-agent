@@ -1,7 +1,7 @@
 # KISEKI · 二次元游戏智能体
 
 > 让 Agent 看着屏幕、理解局面、替你打完二次元游戏的日常。
-> 当前状态：**v0.3 / M0 实机开发中**（2026-11-08 起）：`src/kiseki_runtime` 已有可运行的 MCP 运行时骨架（9 个工具面、`dry_run`、F12 急停、单元测试），界面锚点尚未上真机校准；`vendor/GameScaling` 为官方仓库镜像（不入库）。
+> 当前状态：**v0.4 / M0 已跑通 + M1.0 模板匹配**（2026-11-08 起）：`src/kiseki_runtime` 提供 11 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`dry_run`、F12 急停、42 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
 >
 > **v0.3 范围基线**：GameScaling 仅作参考；首发 **崩坏：星穹铁道（只测 UI）** 与 **明日方舟：终末地（地图 > 基建 > 战斗）**；DSH 作为 Agent 基座，主模型继续云端、只用小号。详见 [04-DSH集成与运行时方案](docs/04-DSH集成与运行时方案.md)。
 
@@ -94,12 +94,13 @@ anime-game-agent/
 > 仓库状态：**public**（2026-11-08 起）。提交前会自动跑隐私守卫测试（`tests/test_privacy.py`），
 > 确保本机路径、游戏 UID、token 等不出现在被跟踪文件里。
 
-## 快速验证（M0，已可运行）
+## 快速验证（M0 已跑通，M1.0 模板匹配已接入）
 
-前置：Windows 11 + DSH 0.2.1-rc.5 + 星铁小号；第一周不需要本地 GPU。运行时零第三方依赖（Python 3.11+，纯 ctypes），先跑单元测试与自检：
+前置：Windows 11 + DSH 0.2.1-rc.5 + 星铁小号。核心运行时零第三方依赖（Python 3.11+，纯 ctypes）；模板匹配需要 OpenCV（可选安装）：
 
 ```powershell
 cd C:\AI\anime-game-agent
+python -m pip install -e .[vision,tools]   # vision = OpenCV（M1.0+），tools = Pillow（构建模板用）
 $env:PYTHONPATH="C:\AI\anime-game-agent\src"
 
 # 1) 单元测试（离线：不注入输入、不需要游戏窗口）
@@ -111,16 +112,31 @@ python -m kiseki_runtime.mcp_server --self-check
 # 3) MCP 冒烟：stdio 上一次 initialize + tools/list
 '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | python -m kiseki_runtime.mcp_server
 
-```powershell
-# 真实游戏只读冒烟（需要游戏正在运行；只 focus + 截图，不发送输入）
+# 4) 真实游戏只读冒烟（需要游戏正在运行；只 focus + 截图，不发送输入）
 python scripts/smoke.py hsr --capture
+```
 
-> 截图默认按 profile 的 `capture.scale`（当前 `hsr`/`endfield-map` 均为 `0.5` → 1280x800）下采样；单次调用可用 `game_capture(scale=1.0)` 覆盖。
+截图默认按 profile 的 `capture.scale` 下采样（`hsr` / `endfield-map` 当前 `0.5` → 1280x800），单次调用可用 `game_capture(scale=1.0)` 覆盖。
+
+### M1.0 模板匹配（视觉感知第一步）
+
+```powershell
+# 生成/刷新真机模板：抓 in-game / phone / map 三态截图，按锚点 region 裁图
+$env:PYTHONPATH="C:\AI\anime-game-agent\src"
+python scripts/build_templates.py hsr --write-config
 ```
-```
+
+- 模板与索引在 `assets/templates/<game>/<state>/`；`index.json` 记录每张图的来源状态、尺寸与 region。
+- MCP 侧直接按锚点使用（锚点已带 `template:`）：
+  - `game_locate(anchor="hud_chat")` → `found / score / rect / normalized_center`；
+  - `game_wait_for(anchor="phone_close", timeout=5)` → 轮询到出现为止，超时返回 `ANCHOR_NOT_FOUND`。
+- 两个工具都只读、不发输入；`score` 是 `cv2.TM_CCOEFF_NORMED` 灰度匹配分数。
+- 未安装 OpenCV 时返回 `VISION_UNAVAILABLE`，其余工具照常工作。
+
+### 在 DSH 中挂载
 
 ```yaml
-# 4) 在 <HOME>\.dsh\profiles\desktop\cordis.patch.yml 的 insert: 下加
+# 在 <HOME>\.dsh\profiles\desktop\cordis.patch.yml 的 insert: 下加
 - id: mcp-kiseki
   name: '@deepseek-ai/dsh-mcp-client'
   serverName: kiseki
@@ -136,7 +152,7 @@ python scripts/smoke.py hsr --capture
   failOnStartupError: false
 ```
 
-重启 DSH 后，对话里应出现 `game_capture` / `game_act` 等工具；先用 `dry_run` 验证，不要直接点账号操作。
+重启 DSH 后，对话里应出现 `game_capture` / `game_act` / `game_locate` 等工具；先 `dry_run` 验证再实操。
 
 ### 可选：GameScaling 参考实验（战斗，不排期）
 

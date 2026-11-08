@@ -117,6 +117,46 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
     },
     {
+        "name": "game_locate",
+        "description": (
+            "Locate the template image configured for an anchor (M1.0 template matching). "
+            "Returns found/score and a pixel rect plus normalized center; no input is sent."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "game_id": {"type": "string"},
+                "anchor": {"type": "string", "description": "anchor id declared in the Game Profile"},
+                "template": {"type": "string", "description": "template path (repo-relative or absolute), overrides the anchor template"},
+                "region": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "[x0, y0, x1, y1] normalized to 0..1; matching is restricted to this region",
+                },
+                "threshold": {"type": "number", "description": "match threshold in (0, 1]; defaults to the anchor threshold or 0.9"},
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "game_wait_for",
+        "description": "Poll game_locate until the anchor appears or the timeout expires (ANCHOR_NOT_FOUND).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "game_id": {"type": "string"},
+                "anchor": {"type": "string"},
+                "template": {"type": "string"},
+                "timeout": {"type": "number", "description": "seconds to wait, default 10"},
+                "interval": {"type": "number", "description": "seconds between attempts, default 0.3"},
+                "threshold": {"type": "number"},
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "game_map",
         "description": "Reserved for M2 map understanding; currently returns NOT_IMPLEMENTED.",
         "inputSchema": {
@@ -252,6 +292,23 @@ class Server:
             )
         if name == "game_status":
             return runtime.game_status()
+        if name == "game_locate":
+            return runtime.game_locate(
+                game_id=arguments.get("game_id"),
+                anchor=arguments.get("anchor"),
+                template=arguments.get("template"),
+                region=arguments.get("region"),
+                threshold=arguments.get("threshold"),
+            )
+        if name == "game_wait_for":
+            return runtime.game_wait_for(
+                game_id=arguments.get("game_id"),
+                anchor=arguments.get("anchor"),
+                template=arguments.get("template"),
+                timeout=arguments.get("timeout", 10),
+                interval=arguments.get("interval", 0.3),
+                threshold=arguments.get("threshold"),
+            )
         if name == "game_map":
             return runtime.game_map(arguments.get("game_id"))
         if name == "game_stop":
