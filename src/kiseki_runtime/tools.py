@@ -45,6 +45,7 @@ TOOL_NAMES = [
     "game_locate",
     "game_wait_for",
     "game_ocr",
+    "game_check",
     "game_status",
     "game_map",
     "game_stop",
@@ -116,6 +117,35 @@ def _capture_scale(scale: float | None) -> float:
             maximum=MAX_CAPTURE_SCALE,
         )
     return value
+
+
+def _check_definition(profile: dict[str, Any], name: str) -> dict[str, Any]:
+    """Resolve one named guard or raise ``UNKNOWN_CHECK``."""
+
+    declared = profile_module.checks(profile)
+    definition = declared.get(name)
+    if definition is None:
+        raise PolicyError(
+            f"check {name!r} is not declared by profile {profile.get('id')!r}",
+            code_hint="UNKNOWN_CHECK",
+            check=name,
+            known=sorted(declared),
+        )
+    return definition
+
+
+def _guard_names(entry: dict[str, Any], key: str) -> list[str]:
+    raw = entry.get(key) or []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raise ProfileError(
+            f"skill {entry.get('id')!r}: {key} must be a list of check names",
+            code_hint="INVALID_CHECK",
+            skill=entry.get("id"),
+            key=key,
+        )
+    return [str(item) for item in raw if item]
 
 
 class Runtime:
@@ -363,8 +393,37 @@ class Runtime:
                 "perception are implemented in M2",
                 skill=skill,
             )
+        requires = _guard_names(entry, "require")
+        confirms = _guard_names(entry, "confirm")
+        preconditions = [self._evaluate_check(profile, name) for name in requires]
+        failed = [item for item in preconditions if not item["ok"]]
+        if failed:
+            raise KisekiError(
+                f"skill {skill!r} precondition failed: "
+                + ", ".join(str(item["name"]) for item in failed),
+                code_hint="SKILL_PRECONDITION",
+                skill=skill,
+                failed=failed,
+                preconditions=preconditions,
+            )
         result = self.game_act(game_id, declared, dry_run=dry_run)
         result["skill"] = skill
+        if preconditions:
+            result["preconditions"] = preconditions
+        if confirms:
+            postconditions = [self._evaluate_check(profile, name) for name in confirms]
+            result["postconditions"] = postconditions
+            unmet = [item for item in postconditions if not item["ok"]]
+            if unmet:
+                raise KisekiError(
+                    f"skill {skill!r} executed but postcondition failed: "
+                    + ", ".join(str(item["name"]) for item in unmet),
+                    code_hint="SKILL_POSTCONDITION",
+                    skill=skill,
+                    unmet=unmet,
+                    postconditions=postconditions,
+                    result=result,
+                )
         return result
 
     # -- vision (M1.0) -----------------------------------------------------
@@ -600,6 +659,102 @@ class Runtime:
             "min_confidence": threshold,
             "line_count": len(lines),
             "lines": lines,
+        }
+
+    # -- checks (M1.2) -----------------------------------------------------
+    def _evaluate_check(self, profile: dict[str, Any], name: str) -> dict[str, Any]:
+        """Evaluate one named guard read-only (template presence or OCR text)."""
+
+        definition = _check_definition(profile, name)
+        ocr_spec = definition.get("ocr")
+        if ocr_spec is not None:
+            if not isinstance(ocr_spec, dict):
+                raise ProfileError(
+                    f"check {name!r}: ocr must be a map",
+                    code_hint="INVALID_CHECK",
+                    check=name,
+                )
+            region = ocr_spec.get("region")
+            if region is not None and (
+                not isinstance(region, (list, tuple)) or len(region) != 4
+            ):
+                raise ProfileError(
+                    f"check {name!r}: ocr.region must be [x0, y0, x1, y1]",
+                    code_hint="INVALID_CHECK",
+                    check=name,
+                )
+            result = self.game_ocr(
+                game_id=profile["id"],
+                anchor=ocr_spec.get("anchor"),
+                region=region,
+                min_confidence=ocr_spec.get("min_confidence"),
+                language=str(ocr_spec.get("language") or "ch"),
+                preset=ocr_spec.get("preset"),
+            )
+            needle = str(ocr_spec.get("contains") or "").strip()
+            matches = [
+                line
+                for line in result["lines"]
+                if needle and needle in str(line.get("text", ""))
+            ]
+            passed = bool(matches) if needle else bool(result["lines"])
+            return {
+                "name": name,
+                "kind": "ocr",
+                "ok": passed,
+                "contains": needle or None,
+                "line_count": result["line_count"],
+                "matches": matches[:5],
+                "preset": result["preset"],
+            }
+        anchor = definition.get("anchor")
+        template = definition.get("template")
+        if not anchor and not template:
+            raise ProfileError(
+                f"check {name!r} needs an anchor/template or an ocr spec",
+                code_hint="INVALID_CHECK",
+                check=name,
+            )
+        expected = bool(definition.get("present", True))
+        located = self.game_locate(
+            game_id=profile["id"],
+            anchor=anchor,
+            template=template,
+            region=definition.get("region"),
+            threshold=definition.get("threshold"),
+        )
+        found = bool(located["found"])
+        return {
+            "name": name,
+            "kind": "template",
+            "ok": found == expected,
+            "expected": expected,
+            "found": found,
+            "score": located["score"],
+            "anchor": anchor,
+            "rect": located.get("rect"),
+            "normalized_center": located.get("normalized_center"),
+        }
+
+    def game_check(
+        self,
+        game_id: str | None = None,
+        check: str | None = None,
+    ) -> dict[str, Any]:
+        """Evaluate a named guard declared in ``checks`` (read-only)."""
+
+        if not check:
+            raise KisekiError(
+                "game_check needs a check name", code_hint="INVALID_ARGUMENT"
+            )
+        profile = self.profile(game_id) if game_id else self._only_focused_profile()
+        evaluation = self._evaluate_check(profile, str(check))
+        return {
+            "ok": True,
+            "game_id": profile["id"],
+            "check": evaluation["name"],
+            "passed": bool(evaluation["ok"]),
+            "detail": evaluation,
         }
 
     def game_status(self) -> dict[str, Any]:

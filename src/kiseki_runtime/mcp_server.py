@@ -190,6 +190,23 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "game_check",
+        "description": (
+            "Evaluate one named guard declared in profile.checks (M1.2). "
+            "Read-only: template-presence checks reuse game_locate, OCR checks "
+            "reuse game_ocr. Skills use the same names in require/confirm."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "game_id": {"type": "string"},
+                "check": {"type": "string", "description": "check name from profile.checks"},
+            },
+            "required": ["check"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "game_map",
         "description": "Reserved for M2 map understanding; currently returns NOT_IMPLEMENTED.",
         "inputSchema": {
@@ -351,6 +368,8 @@ class Server:
                 language=arguments.get("language", "ch"),
                 preset=arguments.get("preset"),
             )
+        if name == "game_check":
+            return runtime.game_check(arguments.get("game_id"), arguments.get("check"))
         if name == "game_map":
             return runtime.game_map(arguments.get("game_id"))
         if name == "game_stop":

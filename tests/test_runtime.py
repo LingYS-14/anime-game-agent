@@ -38,8 +38,27 @@ safety:
   emergency_stop_key: F12
   dry_run: true
   forbid_keys: [alt+f4]
+checks:
+  mail_visible:
+    anchor: mail
+    present: true
+  mail_text:
+    ocr:
+      anchor: mail
+      contains: 邮件
 skills:
   - id: tap_mail
+    actions:
+      - type: click
+        target: {anchor: mail}
+  - id: guarded_tap
+    require: [mail_visible]
+    confirm: [mail_visible]
+    actions:
+      - type: click
+        target: {anchor: mail}
+  - id: confirm_only
+    confirm: [mail_visible]
     actions:
       - type: click
         target: {anchor: mail}
@@ -203,7 +222,7 @@ class McpServerTests(unittest.TestCase):
         listed = self.call("tools/list")
         names = [tool["name"] for tool in listed["result"]["tools"]]
         self.assertEqual(names, [schema["name"] for schema in TOOL_SCHEMAS])
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 13)
 
     def test_status_tool_works(self) -> None:
         response = self.call("tools/call", {"name": "game_status", "arguments": {}})
@@ -386,6 +405,60 @@ class CaptureScaleTests(unittest.TestCase):
                 with self.assertRaises(KisekiError) as ctx:
                     self.runtime.game_capture(game_id="demo", scale=bad_scale)
                 self.assertEqual(ctx.exception.details.get("code_hint"), "INVALID_SCALE")
+
+
+
+class CheckTests(unittest.TestCase):
+    def make(self) -> Runtime:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        directory = Path(temporary.name)
+        (directory / "demo.yaml").write_text(PROFILE_TEXT, encoding="utf-8")
+        return Runtime(root=Path(__file__).resolve().parents[1], profiles_dir=directory)
+
+    def test_unknown_check_is_rejected(self) -> None:
+        runtime = self.make()
+        with self.assertRaises(PolicyError) as caught:
+            runtime.game_check("demo", "nope")
+        self.assertEqual(caught.exception.details.get("code_hint"), "UNKNOWN_CHECK")
+
+    def test_profile_check_names_are_listed(self) -> None:
+        runtime = self.make()
+        declared = profiles.checks(runtime.profile("demo"))
+        self.assertEqual(sorted(declared), ["mail_text", "mail_visible"])
+
+    DRY_RESULT = {"ok": True, "dry_run": True, "planned": []}
+
+    def test_skill_precondition_blocks_the_action(self) -> None:
+        runtime = self.make()
+        failing = {"name": "mail_visible", "kind": "template", "ok": False}
+        with patch.object(Runtime, "game_act", return_value=dict(self.DRY_RESULT)):
+            with patch.object(Runtime, "_evaluate_check", return_value=failing):
+                with self.assertRaises(KisekiError) as caught:
+                    runtime.game_skill("demo", "guarded_tap", dry_run=True)
+        self.assertEqual(caught.exception.details.get("code_hint"), "SKILL_PRECONDITION")
+        self.assertEqual(runtime._actions, 0)
+
+    def test_skill_postcondition_failure_carries_execution(self) -> None:
+        runtime = self.make()
+        failing = {"name": "mail_visible", "kind": "template", "ok": False}
+        with patch.object(Runtime, "game_act", return_value=dict(self.DRY_RESULT)):
+            with patch.object(Runtime, "_evaluate_check", return_value=failing):
+                with self.assertRaises(KisekiError) as caught:
+                    runtime.game_skill("demo", "confirm_only", dry_run=True)
+        details = caught.exception.details
+        self.assertEqual(details.get("code_hint"), "SKILL_POSTCONDITION")
+        self.assertTrue(details.get("result", {}).get("dry_run"))
+
+    def test_skill_passes_when_guard_passes(self) -> None:
+        runtime = self.make()
+        passing = {"name": "mail_visible", "kind": "template", "ok": True}
+        with patch.object(Runtime, "game_act", return_value=dict(self.DRY_RESULT)):
+            with patch.object(Runtime, "_evaluate_check", return_value=passing):
+                result = runtime.game_skill("demo", "guarded_tap", dry_run=True)
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["skill"], "guarded_tap")
+        self.assertEqual(len(result["postconditions"]), 1)
 
 
 if __name__ == "__main__":

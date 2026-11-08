@@ -292,9 +292,34 @@ tasks:
         action: tap
         hold_ms: 40
 
+checks:
+  in_game:
+    anchor: hud_chat
+    present: true
+    threshold: 0.8
+    note: 游戏内 HUD（聊天按钮）可见即视为主界面
+  title_screen:
+    anchor: title_enter
+    present: true
+    threshold: 0.8
+    note: 标题画面「点击进入」可见
+  phone_open:
+    anchor: phone_close
+    present: true
+    threshold: 0.8
+    note: 手机主界面右上角关闭 X 可见
+  mail_open:
+    ocr:
+      region: [0.02, 0.02, 0.30, 0.12]
+      contains: 短信
+      min_confidence: 0.6
+      preset: fast
+    note: 短信界面左上角标题
+
 skills:
   - id: enter_game
     description: 标题画面点「点击进入」并等待载入（实机约 30 s）
+    confirm: [in_game]
     actions:
       - type: wait
         condition: {kind: seconds, seconds: 42}
@@ -317,6 +342,8 @@ skills:
         condition: {kind: seconds, seconds: 2}
   - id: phone_open
     description: 按 Esc 打开手机主界面（星铁实测 Esc 打开手机）
+    require: [in_game]
+    confirm: [phone_open]
     actions:
       - type: key
         keys: [esc]
@@ -326,6 +353,8 @@ skills:
         condition: {kind: seconds, seconds: 1.5}
   - id: phone_close
     description: 再按一次 Esc 关闭手机主界面
+    require: [phone_open]
+    confirm: [in_game]
     actions:
       - type: key
         keys: [esc]

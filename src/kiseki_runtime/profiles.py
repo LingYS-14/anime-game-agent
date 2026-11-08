@@ -82,6 +82,24 @@ def anchors(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return result
 
 
+def checks(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Named read-only guards declared by the profile (M1.2).
+
+    A check is either a template probe (``anchor``/``template`` plus optional
+    ``present``) or an OCR probe (``ocr: {anchor|region, contains,
+    min_confidence, language, preset}``).  Skills reference the names in
+    ``require`` (preconditions) and ``confirm`` (postconditions).
+    """
+
+    raw = profile.get("checks")
+    result: dict[str, dict[str, Any]] = {}
+    if isinstance(raw, dict):
+        for name, definition in raw.items():
+            if isinstance(definition, dict):
+                result[str(name)] = definition
+    return result
+
+
 def emergency_stop_key(profile: dict[str, Any]) -> str:
     return str(safety(profile).get("emergency_stop_key") or "F12")
 

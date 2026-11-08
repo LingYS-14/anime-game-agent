@@ -1,7 +1,7 @@
 # KISEKI · 二次元游戏智能体
 
 > 让 Agent 看着屏幕、理解局面、替你打完二次元游戏的日常。
-> 当前状态：**v0.5 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR**（2026-11-08 起）：`src/kiseki_runtime` 提供 12 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配与 `game_ocr` PaddleOCR 文本识别、`dry_run`、F12 急停、50 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
+> 当前状态：**v0.6 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR + M1.2 技能守卫**（2026-11-08 起）：`src/kiseki_runtime` 提供 13 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`game_ocr` PaddleOCR 文本识别、`game_check` 技能前置/后置守卫、`dry_run`、F12 急停、58 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
 >
 > **v0.3 范围基线**：GameScaling 仅作参考；首发 **崩坏：星穹铁道（只测 UI）** 与 **明日方舟：终末地（地图 > 基建 > 战斗）**；DSH 作为 Agent 基座，主模型继续云端、只用小号。详见 [04-DSH集成与运行时方案](docs/04-DSH集成与运行时方案.md)。
 
@@ -148,8 +148,31 @@ python scripts/build_templates.py hsr --write-config
 
 - 返回 `lines[]`：`text` / `score` / `rect`（客户区像素）/ `normalized_rect` / `normalized_center`（0..1，可直接喂给 `game_act`）；阈值默认 0.5，`language` 默认 `ch`。
 - `preset` 选模型：`accurate`（默认，PP-OCRv6_medium，实机约 7.5 s/帧，`派对车厢` 置信度 0.999）或 `fast`（PP-OCRv5_mobile，实机约 1.4 s/帧，适合轮询 HUD）。首次调用含引擎初始化（约 5–17 s），之后按 preset 进程内缓存。
-- 模型首次运行会自动下载缓存（`~/.paddleocr`）；未安装 PaddleOCR 时返回 `OCR_UNAVAILABLE`，其余工具照常工作。
+- 模型首次运行会自动下载缓存（`~/.paddlex/official_models`）；未安装 PaddleOCR 时返回 `OCR_UNAVAILABLE`，其余工具照常工作。
 - 引擎为进程内缓存（单例），第一次识别包含初始化耗时，之后单帧通常在百毫秒级。
+
+
+### M1.2 技能守卫（require / confirm）
+
+profile 里可以声明命名的只读检查，技能在动作前后自动评估，避免"盲点坐标"：
+
+```yaml
+checks:
+  in_game:    { anchor: hud_chat,   present: true, threshold: 0.8 }
+  phone_open: { anchor: phone_close, present: true, threshold: 0.8 }
+  mail_open:
+    ocr: { region: [0.02, 0.02, 0.30, 0.12], contains: 短信, preset: fast }
+
+skills:
+  - id: phone_close
+    require: [phone_open]   # 前置：手机必须先打开
+    confirm: [in_game]      # 后置：关闭后应回到游戏主界面
+    actions: [...]
+```
+
+- `game_check(game_id="hsr", check="in_game")` → `passed` + `detail`（模板分数或 OCR 命中行），只读、不发输入。
+- `game_skill` 先跑 `require`：不满足直接返回 `SKILL_PRECONDITION`，**不会发出任何输入**；动作执行后再跑 `confirm`：不满足返回 `SKILL_POSTCONDITION`，并附带已执行的动作结果。
+- 真机实测（2026-11-08）：`enter_game` 77.1 s 后 `in_game` 0.9999；`phone_open` 1.6 s、`phone_close` 1.3 s，前置/后置均 0.9999；手机已关闭时再次 `phone_close` 被前置守卫拦下、零输入。
 
 ### 在 DSH 中挂载
 

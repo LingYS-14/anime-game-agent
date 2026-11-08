@@ -81,6 +81,13 @@ tasks:
 
 skills: []
 
+checks:
+  in_game:
+    anchor: minimap
+    present: true
+    threshold: 0.8
+    note: 终末地 HUD 小地图可见（只读副驾；ACE 会丢弃合成输入）
+
 safety:
   max_runtime_s: 900
   max_tasks_per_run: 2
