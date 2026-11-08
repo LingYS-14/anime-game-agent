@@ -154,7 +154,7 @@ M0 阶段「superagent 写代码 + 我验证/合并」的分工成立，可在 M
   返回 `private: false, visibility: public`；`git ls-remote` 匿名可读。
 - 公开前扫描了 `git ls-files` 的全部 77 个文本文件：没有 token、私钥或邮箱；命中的是本机
   用户目录与两个小号 UID。
-- 已替换为占位符：`<HOME>`（原 `C:\Users\ganch`）与 `<redacted-uid>`（原两个游戏 UID），
+- 已替换为占位符：`<HOME>`（原本机用户目录（占位符 `<HOME>`））与 `<redacted-uid>`（原两个游戏 UID），
   涉及 `README.md`、`configs/endfield-map.yaml`、`docs/devlog/2026-11-08-night.md`、
   `docs/reports/2026-11-08-night-report.md`、`docs/04-DSH集成与运行时方案.md`、
   `docs/05-锚点校准手册.md`。
