@@ -67,6 +67,7 @@ flowchart TB
 | [路线图与验收](docs/02-路线图与验收.md) | 12 周验证路线（v0.3）、WBS、预算、评测体系、风险登记册、Kill Criteria |
 | [关键实验与数据计划](docs/03-实验与数据计划.md) | 星铁 UI 第一周清单、终末地地图/基建实验协议、GameScaling 参考实验 |
 | [DSH 集成与运行时](docs/04-DSH集成与运行时方案.md) | DSH 能力边界、9 个 MCP 工具、Game Profile、时延预算、两周 MVP |
+| [维护与运营](docs/06-维护与运营.md) | public 后的日常运营：隐私守卫、superagent 常驻、人审合并、看门狗 |
 | [游戏适配包示例](configs/game_profile.example.yaml) | 一款新游戏需要声明什么 |
 | [动作协议](schemas/action.schema.json) | 高层动作与 200 ms 底层动作块的统一 JSON Schema |
 
