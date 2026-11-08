@@ -10,3 +10,4 @@
 ## 2. CH9329 到货时间
 
 - 用户已下单（预计 2–3 天）；到货后告知端口号（COMx）即可接入 `input.backend: hid-serial`。
+- 进展（2026-11-08 20:05）：`input_backend.py` 与执行器接线已完成（86 tests），本机当前无 COM 口；硬件插入后只需在 profile 里填 `input.serial.port`。

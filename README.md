@@ -184,7 +184,20 @@ ACE 会过滤 `SendInput` 合成输入（终末地实测：所有合成键鼠事
 - 键位映射：字母/数字/方向键/F1–F12/Esc/Enter 等 USB HID usage id，Ctrl/Shift/Alt/Win 修饰位；
 - `Ch9329(port="COM3", baudrate=115200)`：`info()` 探链路、`move()`、`click()`、`press()`/`release()`/`tap()`；pyserial 未装时返回 `HID_UNAVAILABLE`（`pip install -e .[hid]`）。
 
-当前只完成传输层 + 单元测试；等 CH9329 到货后接 `input.backend: hid-serial` 并在终末地实测（相对移动 + 读 `GetCursorPos()` 做闭环点击）。
+当前已把传输层接进执行器（M1.3b）：
+
+```yaml
+# configs/<game>.yaml
+input:
+  backend: hid-serial      # 默认 sendinput；改成 hid-serial 即走串口 HID
+  serial:
+    port: COM3             # CH9329 插上后设备管理器里看到的端口
+    baudrate: 115200
+```
+
+- `src/kiseki_runtime/input_backend.py`：`SendInputBackend`（默认）与 `HidSerialBackend`；后者用相对报告移动光标，并读 `GetCursorPos()` 做闭环（容差 2px，40 次迭代上限，超时抛 `HID_MOVE_TIMEOUT`），键位状态机负责 down/up/tap 组合键。
+- `execute_actions(..., backend=...)` 走统一接口，`game_act` 按 profile 的 `input.backend` 自动选择；`game_stop` 会同时释放两种后端的按键/按钮。
+- 没有硬件时所有逻辑都可用 `FakeTransport` + 假光标离线测试（`tests/test_input_backend.py`，13 个用例）。
 
 ### 在 DSH 中挂载
 

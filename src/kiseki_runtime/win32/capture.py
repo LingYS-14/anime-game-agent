@@ -90,6 +90,7 @@ user32.GetWindowTextW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
 user32.GetClassNameW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
 user32.GetWindowThreadProcessId.argtypes = [wt.HWND, ctypes.POINTER(wt.DWORD)]
 user32.GetSystemMetrics.argtypes = [ctypes.c_int]
+user32.GetCursorPos.argtypes = [ctypes.POINTER(POINT)]
 if hasattr(user32, "GetDpiForWindow"):
     user32.GetDpiForWindow.argtypes = [wt.HWND]
     user32.GetDpiForWindow.restype = wt.UINT
@@ -731,6 +732,15 @@ def capture_screen_png(
         "height": height,
         "region": list(region) if region else None,
     }
+
+
+def cursor_position() -> tuple[int, int]:
+    """Current pointer position in virtual-desktop pixels."""
+
+    point = POINT(0, 0)
+    if not user32.GetCursorPos(ctypes.byref(point)):
+        raise CaptureError(f"GetCursorPos failed (error {ctypes.get_last_error()})")
+    return int(point.x), int(point.y)
 
 
 def desktop_rect() -> dict[str, int]:

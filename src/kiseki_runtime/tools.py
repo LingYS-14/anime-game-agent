@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from . import actions as action_module
+from . import input_backend as backend_module
 from . import estop as estop_module
 from . import ocr as ocr_module
 from . import profiles as profile_module
@@ -172,8 +173,22 @@ class Runtime:
         self._started_at = time.time()
         self._captures = 0
         self._actions = 0
+        self._backends: dict[tuple[str, str], Any] = {}
 
     # -- helpers -----------------------------------------------------------
+    def _input_backend(self, profile: dict[str, Any]) -> Any:
+        """Return (and cache) the backend named by `input.backend`."""
+
+        section = profile.get("input") if isinstance(profile.get("input"), dict) else {}
+        name = str(section.get("backend") or "sendinput").strip().lower()
+        serial = section.get("serial") if isinstance(section.get("serial"), dict) else {}
+        key = (name, str(serial.get("port") or ""))
+        backend = self._backends.get(key)
+        if backend is None:
+            backend = backend_module.from_profile(profile)
+            self._backends[key] = backend
+        return backend
+
     def _profile_signature(self) -> tuple[tuple[str, int, int], ...]:
         """Cheap fingerprint of configs/*.yaml so profile edits hot-reload without restart."""
         try:
@@ -362,6 +377,7 @@ class Runtime:
         trace = action_module.execute_actions(
             planned,
             hwnd=int(window["hwnd"]),
+            backend=self._input_backend(profile),
             focus_check=bool(profile.get("input", {}).get("focus_check", True)),
             cancel_check=lambda: self._cancel_check(profile),
         )
@@ -785,6 +801,11 @@ class Runtime:
 
     def game_stop(self, reason: str | None = None) -> dict[str, Any]:
         released = winput.release_all()
+        for backend in self._backends.values():
+            try:
+                backend.release_all()
+            except Exception:  # hardware may already be gone; stop must not fail
+                pass
         power.release_awake()
         for watcher in self._estops.values():
             watcher.reset()

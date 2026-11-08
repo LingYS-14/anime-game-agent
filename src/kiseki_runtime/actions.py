@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 from .errors import NotSupportedError, PolicyError
 from . import profiles as profile_module
+from . import input_backend
 from .win32 import capture, input as winput
 
 MAX_ACTIONS = 64
@@ -190,11 +191,13 @@ def execute_actions(
     planned: list[dict[str, Any]],
     *,
     hwnd: int,
+    backend: input_backend.InputBackend | None = None,
     focus_check: bool = True,
     cancel_check: Callable[[], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Execute planned steps with foreground enforcement and cancellation."""
 
+    injector = backend or input_backend.SendInputBackend()
     trace: list[dict[str, Any]] = []
     for step in planned:
         if cancel_check is not None:
@@ -208,7 +211,7 @@ def execute_actions(
                 )
         kind = step["kind"]
         if kind == "click":
-            winput.click(
+            injector.click(
                 step["screen"][0],
                 step["screen"][1],
                 button=step["button"],
@@ -219,25 +222,25 @@ def execute_actions(
             mode = step["action"]
             if mode in ("down",):
                 for name in step["keys"]:
-                    winput.key_down(name)
+                    injector.key_down(name)
             elif mode in ("up", "release"):
                 for name in step["keys"]:
-                    winput.key_up(name)
+                    injector.key_up(name)
             elif mode == "tap":
-                winput.press_combo(step["keys"], hold_ms=step["hold_ms"])
+                injector.press_combo(step["keys"], hold_ms=step["hold_ms"])
             else:  # hold: press, keep for hold_ms, release
                 for name in step["keys"]:
-                    winput.key_down(name)
+                    injector.key_down(name)
                 try:
                     time.sleep(max(0.0, step["hold_ms"]) / 1000.0)
                 finally:
                     for name in reversed(step["keys"]):
-                        winput.key_up(name)
+                        injector.key_up(name)
         elif kind == "move":
             if step["relative"]:
-                winput.mouse_move_by(step["dx"], step["dy"], duration_ms=step["duration_ms"])
+                injector.mouse_move_by(step["dx"], step["dy"], duration_ms=step["duration_ms"])
             else:
-                winput.mouse_move_to(step["dx"], step["dy"])
+                injector.mouse_move_to(step["dx"], step["dy"])
         elif kind == "wait":
             time.sleep(step["seconds"])
         trace.append({"ok": True, **step})
