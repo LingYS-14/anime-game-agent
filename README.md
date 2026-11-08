@@ -199,6 +199,21 @@ input:
 - `execute_actions(..., backend=...)` 走统一接口，`game_act` 按 profile 的 `input.backend` 自动选择；`game_stop` 会同时释放两种后端的按键/按钮。
 - 没有硬件时所有逻辑都可用 `FakeTransport` + 假光标离线测试（`tests/test_input_backend.py`，13 个用例）。
 
+### M1.4 只读技能链（短信界面）
+
+在 M1.2 的守卫之上补了三个只读技能，串起「打开手机 → 读短信列表 → 返回」：
+
+```yaml
+checks:
+  mail_open: {ocr: {region: [0.02, 0.02, 0.30, 0.12], contains: 短信, preset: fast}}
+
+skills:
+  - id: open_mail       # require: [phone_open]   confirm: [mail_open]
+  - id: back_to_phone   # require: [mail_open]    confirm: [phone_open]
+```
+
+实机（2026-11-08 21:48，星铁 4.6.0）：`phone_open` → `open_mail`（后置 OCR `短信` 0.9999）→ OCR 列表 11 行/4.3 s → `back_to_phone` → `phone_close`，每一步的前置/后置都真实求值，不满足时零输入。只读链路，不点任何领取按钮。
+
 ### 在 DSH 中挂载
 
 ```yaml

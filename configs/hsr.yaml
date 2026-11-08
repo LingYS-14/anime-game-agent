@@ -371,6 +371,29 @@ skills:
         hold_ms: 40
       - type: wait
         condition: {kind: seconds, seconds: 1}
+  - id: open_mail
+    description: 手机主界面点「短信」打开消息列表（只读，不点领取）
+    require: [phone_open]
+    confirm: [mail_open]
+    actions:
+      - type: click
+        target: {anchor: phone_mail}
+        button: left
+        clicks: 1
+        hold_ms: 60
+      - type: wait
+        condition: {kind: seconds, seconds: 1.6}
+  - id: back_to_phone
+    description: 从短信界面返回手机主界面（Esc）
+    require: [mail_open]
+    confirm: [phone_open]
+    actions:
+      - type: key
+        keys: [esc]
+        action: tap
+        hold_ms: 40
+      - type: wait
+        condition: {kind: seconds, seconds: 1.2}
 
 safety:
   max_runtime_s: 1800

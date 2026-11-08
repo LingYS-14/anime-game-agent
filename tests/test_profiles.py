@@ -51,6 +51,33 @@ class ShippedProfilesTest(unittest.TestCase):
                 for action in skill.get("actions", []):
                     self.assertIn(action.get("type"), kinds, f"{game_id}: skill {skill.get('id')}")
 
+    def test_skill_guards_reference_declared_checks(self) -> None:
+        for game_id, profile in self.profiles.items():
+            declared = set(profile.get("checks") or {})
+            for skill in profile.get("skills", []):
+                for key in ("require", "confirm"):
+                    raw = skill.get(key)
+                    if raw is None:
+                        continue
+                    names = [raw] if isinstance(raw, str) else list(raw)
+                    for name in names:
+                        self.assertIn(
+                            name,
+                            declared,
+                            f"{game_id}: skill {skill.get('id')} {key} references unknown check {name!r}",
+                        )
+
+    def test_checks_have_a_supported_kind(self) -> None:
+        for game_id, profile in self.profiles.items():
+            for name, entry in (profile.get("checks") or {}).items():
+                kind = "ocr" if isinstance(entry.get("ocr"), dict) else "template"
+                self.assertIn(kind, ("ocr", "template"), f"{game_id}: check {name}")
+                if kind == "template":
+                    self.assertTrue(entry.get("anchor") or entry.get("template"), f"{game_id}: check {name} anchor")
+                else:
+                    ocr = entry["ocr"]
+                    self.assertTrue(ocr.get("anchor") or ocr.get("region"), f"{game_id}: check {name} region")
+
     def test_safety_defaults_keep_dry_run_on(self) -> None:
         for game_id, profile in self.profiles.items():
             safety = profile.get("safety", {})
