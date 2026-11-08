@@ -180,6 +180,11 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "description": "drop lines below this score, 0..1 (default 0.5)",
                 },
                 "language": {"type": "string", "description": "PaddleOCR language code, default ch"},
+                "preset": {
+                    "type": "string",
+                    "enum": ["accurate", "fast"],
+                    "description": "OCR models: accurate = PP-OCRv6_medium (~7 s), fast = PP-OCRv5_mobile (~1.5 s); default accurate",
+                },
             },
             "additionalProperties": False,
         },
@@ -344,6 +349,7 @@ class Server:
                 region=arguments.get("region"),
                 min_confidence=arguments.get("min_confidence"),
                 language=arguments.get("language", "ch"),
+                preset=arguments.get("preset"),
             )
         if name == "game_map":
             return runtime.game_map(arguments.get("game_id"))

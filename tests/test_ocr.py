@@ -53,6 +53,19 @@ class LineMappingTests(unittest.TestCase):
         self.assertEqual(rect, [10, 20, 20, 30])
 
 
+class PresetTests(unittest.TestCase):
+    def test_default_preset_is_accurate(self) -> None:
+        self.assertEqual(ocr.normalize_preset(None), "accurate")
+
+    def test_accepts_fast_and_case_insensitive(self) -> None:
+        self.assertEqual(ocr.normalize_preset("FAST"), "fast")
+
+    def test_rejects_unknown_preset(self) -> None:
+        with self.assertRaises(KisekiError) as caught:
+            ocr.normalize_preset("turbo")
+        self.assertEqual(caught.exception.details["code_hint"], "INVALID_PRESET")
+
+
 class AvailabilityTests(unittest.TestCase):
     def test_require_raises_typed_error_when_missing(self) -> None:
         if ocr.available():

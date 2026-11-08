@@ -103,7 +103,6 @@ cd C:\AI\anime-game-agent
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .[vision,tools,ocr]
 $env:PYTHONPATH="C:\AI\anime-game-agent\src"
-```
 
 # 1) 单元测试（离线：不注入输入、不需要游戏窗口）
 python -m unittest discover -s tests
@@ -148,6 +147,7 @@ python scripts/build_templates.py hsr --write-config
 ```
 
 - 返回 `lines[]`：`text` / `score` / `rect`（客户区像素）/ `normalized_rect` / `normalized_center`（0..1，可直接喂给 `game_act`）；阈值默认 0.5，`language` 默认 `ch`。
+- `preset` 选模型：`accurate`（默认，PP-OCRv6_medium，实机约 7.5 s/帧，`派对车厢` 置信度 0.999）或 `fast`（PP-OCRv5_mobile，实机约 1.4 s/帧，适合轮询 HUD）。首次调用含引擎初始化（约 5–17 s），之后按 preset 进程内缓存。
 - 模型首次运行会自动下载缓存（`~/.paddleocr`）；未安装 PaddleOCR 时返回 `OCR_UNAVAILABLE`，其余工具照常工作。
 - 引擎为进程内缓存（单例），第一次识别包含初始化耗时，之后单帧通常在百毫秒级。
 

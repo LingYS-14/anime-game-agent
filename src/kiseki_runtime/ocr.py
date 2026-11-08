@@ -20,9 +20,7 @@ from .errors import KisekiError
 MIN_CONFIDENCE = 0.0
 MAX_CONFIDENCE = 1.0
 
-_engine = None
-_engine_language = None
-_engine_lock = threading.Lock()
+PRESETS_DEFAULT = "accurate"
 
 
 def available() -> bool:
@@ -72,23 +70,58 @@ def normalize_confidence(confidence: float | None) -> float:
     return value
 
 
-def _engine_for(language: str):
-    """Return a cached PaddleOCR engine for ``language``."""
+# PaddleOCR 3.7 ships PP-OCRv6_medium by default (accurate, ~7 s/frame on this
+# CPU) and can fall back to the PP-OCRv5 mobile det+rec pair (~1.5 s/frame).
+# "accurate" is the default because the game fonts are stylised; callers that
+# poll a HUD repeatedly can opt into "fast".
+PRESETS: dict[str, dict[str, str]] = {
+    "accurate": {},
+    "fast": {
+        "text_detection_model_name": "PP-OCRv5_mobile_det",
+        "text_recognition_model_name": "PP-OCRv5_mobile_rec",
+    },
+}
 
-    global _engine, _engine_language
+_engines: dict[tuple[str, str], Any] = {}
+_engine_lock = threading.Lock()
+
+
+def normalize_preset(preset: str | None) -> str:
+    """Validate the OCR preset name."""
+
+    name = "accurate" if preset is None else str(preset).strip().lower()
+    if name not in PRESETS:
+        raise KisekiError(
+            f"unknown OCR preset {preset!r}",
+            code_hint="INVALID_PRESET",
+            preset=str(preset),
+            supported=sorted(PRESETS),
+        )
+    return name
+
+
+def _engine_for(language: str, preset: str):
+    """Return a cached PaddleOCR engine for ``(language, preset)``."""
+
+    key = (language, preset)
     with _engine_lock:
-        if _engine is not None and _engine_language == language:
-            return _engine
+        if key in _engines:
+            return _engines[key]
         from paddleocr import PaddleOCR  # heavy import, kept out of module load
 
-        _engine = PaddleOCR(
+        engine = PaddleOCR(
             lang=language,
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
+            # Paddle 3.3's PIR + oneDNN path raises NotImplementedError on some
+            # ops (ConvertPirAttribute2RuntimeAttribute); the plain CPU kernels
+            # are slower but stable.
+            enable_mkldnn=False,
+            **PRESETS[preset],
         )
-        _engine_language = language
-        return _engine
+        _engines[key] = engine
+        return engine
 
 
 def _result_attr(result: Any, name: str) -> Any:
@@ -175,17 +208,19 @@ def recognize(
     client_height: int,
     min_confidence: float | None = None,
     language: str = "ch",
+    preset: str | None = None,
 ) -> list[dict[str, Any]]:
     """Run PaddleOCR on an RGB buffer and return normalized text lines."""
 
     require()
     threshold = normalize_confidence(min_confidence)
+    chosen = normalize_preset(preset)
     import numpy as np
 
     frame = np.frombuffer(image, dtype=np.uint8).reshape((height, width, 3))
     # PaddleOCR follows the OpenCV convention and wants BGR pixels.
     bgr = np.ascontiguousarray(frame[:, :, ::-1])
-    engine = _engine_for(language)
+    engine = _engine_for(language, chosen)
     try:
         results = engine.predict(bgr)
     except Exception as error:  # pragma: no cover - depends on native runtime

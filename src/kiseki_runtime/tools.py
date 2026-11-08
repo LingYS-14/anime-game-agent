@@ -535,6 +535,7 @@ class Runtime:
         region: list[float] | None = None,
         min_confidence: float | None = None,
         language: str = "ch",
+        preset: str | None = None,
     ) -> dict[str, Any]:
         """Read text from the current frame with PaddleOCR (M1.1).
 
@@ -560,6 +561,7 @@ class Runtime:
             if isinstance(declared, (list, tuple)) and len(declared) == 4:
                 search_region = [round(float(value), 6) for value in declared]
         threshold = ocr_module.normalize_confidence(min_confidence)
+        chosen_preset = ocr_module.normalize_preset(preset)
         lang = str(language or "ch").strip() or "ch"
         if not lang.replace("_", "").isalnum() or len(lang) > 12:
             raise KisekiError(
@@ -580,6 +582,7 @@ class Runtime:
             client_height,
             threshold,
             lang,
+            chosen_preset,
         )
         return {
             "ok": True,
@@ -592,6 +595,7 @@ class Runtime:
                 frame.get("foreground", capture.is_foreground(int(window["hwnd"])))
             ),
             "engine": "paddleocr",
+            "preset": chosen_preset,
             "language": lang,
             "min_confidence": threshold,
             "line_count": len(lines),
