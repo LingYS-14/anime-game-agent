@@ -1,7 +1,7 @@
 # KISEKI 夜间实机开发报告（2026-11-08 03:00–07:00）
 
 > 作者：DSH 编码代理（受 LingYS-14 授权自主执行）
-> 仓库：https://github.com/LingYS-14/anime-game-agent （private）
+> 仓库：https://github.com/LingYS-14/anime-game-agent （2026-11-08 起 **public**，已完成脱敏）
 > 运行环境：Windows、2560x1600、DPI 120%、崩坏：星穹铁道 4.6.0、终末地 1.6.3、DSH + kiseki MCP
 
 ## 1. 一句话摘要
@@ -70,7 +70,7 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通并�
   - `4be7799`/`cfad2bd`/`d342961` 合并 superagent 的 CI / 文档 / scale 三个 PR
   - `ed7e124` / `412a3e1` M0.5: profile 级默认截图缩放；`2f97eb9` 报告更新
 - 远端：已同步（`git status` 干净）。夜间 GitHub HTTPS 多次被阻断，由「清代理 + 重试」完成推送。
-- 单测：**33 个全部通过**；`--self-check` 正常；仓库私有，`vendor/GameScaling/`、`captures/`、`.artifacts/`、PR 审查临时目录已 ignore。
+- 单测：**35 个全部通过**（含隐私守卫测试）；`--self-check` 正常；仓库已转 public，`vendor/GameScaling/`、`captures/`、`.artifacts/`、PR 审查临时目录已 ignore。
 - CI：PR #2 合并后 main 上的 workflow 三次运行全部 success。
 
 ## 4. 遇到的问题与教训（按重要度）
@@ -87,7 +87,7 @@ dsh-superagent 的 issue→ticket→worker→PR 链路在 Windows 上跑通并�
 ## 5. 待你决定（明早讨论）
 
 1. **合并 PR #2 与 PR #4**：CI 工作流本身要在合并后才会在 main 上跑；合并后在 PR 上补一条绿链即可。
-2. **仓库公开性**：继续 private，还是转 public（代码已无隐私内容，但含游戏自动化说明）。
+2. **仓库公开性**：已按决定转 public；路径/UID 脱敏完成，并加入隐私守卫测试。
 3. **superagent 是否常驻维护本仓库**：现在是切到本仓库、人审合并模式；可继续用它接「文档/CI/测试」类工单。
 4. **终末地路线**：「只读副驾」是否足够，还是要换更安全的注入方式（如截图识别 + 人的操作提示）。
 5. **M1 方向**：优先做「视觉感知（模板匹配/OCR）」还是「技能编排（任务 DSL）」——建议先做模板匹配，
@@ -147,3 +147,20 @@ M0 阶段「superagent 写代码 + 我验证/合并」的分工成立，可在 M
 | 截图 | captures/ 下保留本轮全部证据；docs/anchors/hsr/ 有 41 个锚点裁图 |
 
 夜间目标全部完成：星铁 M0 实机闭环、终末地只读结论、superagent 三工单协作验证、M0.5 截图缩放。
+
+## 11. 公开与脱敏（2026-11-08 11:00）
+
+- 仓库已由 private 转为 **public**：`gh api -X PATCH repos/LingYS-14/anime-game-agent -F private=false`
+  返回 `private: false, visibility: public`；`git ls-remote` 匿名可读。
+- 公开前扫描了 `git ls-files` 的全部 77 个文本文件：没有 token、私钥或邮箱；命中的是本机
+  用户目录与两个小号 UID。
+- 已替换为占位符：`<HOME>`（原 `C:\Users\ganch`）与 `<redacted-uid>`（原两个游戏 UID），
+  涉及 `README.md`、`configs/endfield-map.yaml`、`docs/devlog/2026-11-08-night.md`、
+  `docs/reports/2026-11-08-night-report.md`、`docs/04-DSH集成与运行时方案.md`、
+  `docs/05-锚点校准手册.md`。
+- 新增 `tests/test_privacy.py`：扫描所有被跟踪文本，禁止 Windows 用户路径、`/home/<user>/`、
+  `UID <6 位以上数字>`、GitHub/OpenAI/AWS token、私钥头；在现有 CI 工作流里每次 push 自动运行。
+  当前 `python -m unittest discover -s tests` → **35 tests OK**。
+- 仍公开可见的内容：GitHub 账号名 `LingYS-14`（仓库所有者）、游戏自动化说明；
+  `captures/`（含完整游戏截图）不在库内，`docs/anchors/` 只有图标级裁图。
+- 后续每次准备发布/推送前，CI 的隐私守卫会先跑一遍；人工复核以 `tests/test_privacy.py` 为准。

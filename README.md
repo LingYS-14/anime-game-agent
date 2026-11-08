@@ -90,6 +90,9 @@ anime-game-agent/
 └── vendor/GameScaling/          # 官方推理仓库（Apache-2.0，仅参考）
 ```
 
+> 仓库状态：**public**（2026-11-08 起）。提交前会自动跑隐私守卫测试（`tests/test_privacy.py`），
+> 确保本机路径、游戏 UID、token 等不出现在被跟踪文件里。
+
 ## 快速验证（M0，已可运行）
 
 前置：Windows 11 + DSH 0.2.1-rc.5 + 星铁小号；第一周不需要本地 GPU。运行时零第三方依赖（Python 3.11+，纯 ctypes），先跑单元测试与自检：
