@@ -25,6 +25,8 @@ kiseki-runtime = "kiseki_runtime.mcp_server:main"
 vision = ["opencv-python-headless>=4.10"]
 # M1.1: PaddleOCR reads stylised CJK text on busy game backgrounds.
 ocr = ["paddlepaddle>=3.0", "paddleocr>=3.0"]
+# M1.3: USB-HID bridge (CH9329) so anti-cheat protected clients see a real device.
+hid = ["pyserial>=3.5"]
 tools = ["Pillow>=10.0"]
 
 [tool.setuptools]

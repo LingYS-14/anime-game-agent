@@ -1,7 +1,7 @@
 # KISEKI · 二次元游戏智能体
 
 > 让 Agent 看着屏幕、理解局面、替你打完二次元游戏的日常。
-> 当前状态：**v0.6 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR + M1.2 技能守卫**（2026-11-08 起）：`src/kiseki_runtime` 提供 13 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`game_ocr` PaddleOCR 文本识别、`game_check` 技能前置/后置守卫、`dry_run`、F12 急停、58 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
+> 当前状态：**v0.7 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR + M1.2 技能守卫 + M1.3 HID 传输层**（2026-11-08 起）：`src/kiseki_runtime` 提供 13 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`game_ocr` PaddleOCR 文本识别、`game_check` 技能前置/后置守卫、`dry_run`、F12 急停、58 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
 >
 > **v0.3 范围基线**：GameScaling 仅作参考；首发 **崩坏：星穹铁道（只测 UI）** 与 **明日方舟：终末地（地图 > 基建 > 战斗）**；DSH 作为 Agent 基座，主模型继续云端、只用小号。详见 [04-DSH集成与运行时方案](docs/04-DSH集成与运行时方案.md)。
 
@@ -173,6 +173,18 @@ skills:
 - `game_check(game_id="hsr", check="in_game")` → `passed` + `detail`（模板分数或 OCR 命中行），只读、不发输入。
 - `game_skill` 先跑 `require`：不满足直接返回 `SKILL_PRECONDITION`，**不会发出任何输入**；动作执行后再跑 `confirm`：不满足返回 `SKILL_POSTCONDITION`，并附带已执行的动作结果。
 - 真机实测（2026-11-08）：`enter_game` 77.1 s 后 `in_game` 0.9999；`phone_open` 1.6 s、`phone_close` 1.3 s，前置/后置均 0.9999；手机已关闭时再次 `phone_close` 被前置守卫拦下、零输入。
+
+
+### M1.3 HID 输入通道（CH9329，硬件待接入）
+
+ACE 会过滤 `SendInput` 合成输入（终末地实测：所有合成键鼠事件被丢弃），而**硬件 HID** 在反作弊眼里就是真实键鼠。`src/kiseki_runtime/hid_serial.py` 已实现 CH9329 串口协议层（离线可测，不需要硬件）：
+
+- 帧构造：`frame(cmd, data)`、`keyboard_frame(modifier, keys)`、`mouse_frame(buttons, dx, dy, wheel)`，校验和 = 前面所有字节之和 & 0xFF；
+- 相对移动分片：单帧每轴限 ±127（`axis_chunks`），默认 10 ms 报告间隔；
+- 键位映射：字母/数字/方向键/F1–F12/Esc/Enter 等 USB HID usage id，Ctrl/Shift/Alt/Win 修饰位；
+- `Ch9329(port="COM3", baudrate=115200)`：`info()` 探链路、`move()`、`click()`、`press()`/`release()`/`tap()`；pyserial 未装时返回 `HID_UNAVAILABLE`（`pip install -e .[hid]`）。
+
+当前只完成传输层 + 单元测试；等 CH9329 到货后接 `input.backend: hid-serial` 并在终末地实测（相对移动 + 读 `GetCursorPos()` 做闭环点击）。
 
 ### 在 DSH 中挂载
 
