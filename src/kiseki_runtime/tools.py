@@ -149,6 +149,28 @@ def _guard_names(entry: dict[str, Any], key: str) -> list[str]:
     return [str(item) for item in raw if item]
 
 
+def _text_match(lines: list[dict[str, Any]], needle: str) -> dict[str, Any] | None:
+    """Pick the OCR line that best matches ``needle`` (exact beats substring)."""
+
+    wanted = needle.strip()
+    if not wanted:
+        return None
+    exact: list[dict[str, Any]] = []
+    partial: list[dict[str, Any]] = []
+    for line in lines:
+        text = str(line.get("text") or "").strip()
+        if not text:
+            continue
+        if text == wanted:
+            exact.append(line)
+        elif wanted in text:
+            partial.append(line)
+    candidates = exact or partial
+    if not candidates:
+        return None
+    return max(candidates, key=lambda line: float(line.get("score") or 0.0))
+
+
 class Runtime:
     """One runtime process = one tool server; state is intentionally in-memory."""
 
@@ -353,6 +375,64 @@ class Runtime:
             "captures": self._captures,
         }
 
+    def _resolve_text_actions(
+        self,
+        profile: dict[str, Any],
+        actions: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Resolve ``click_text`` actions into normalized click targets via OCR."""
+
+        resolved: list[dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
+        for action in actions:
+            if not isinstance(action, dict) or action.get("type") != "click_text":
+                resolved.append(action)
+                continue
+            needle = str(action.get("text") or "").strip()
+            if not needle:
+                raise PolicyError("click_text needs a non-empty 'text'", code_hint="INVALID_TEXT_TARGET")
+            result = self.game_ocr(
+                profile["id"],
+                region=action.get("region"),
+                min_confidence=action.get("min_confidence"),
+                language=str(action.get("language") or "ch"),
+                preset=action.get("preset"),
+            )
+            line = _text_match(result.get("lines") or [], needle)
+            if line is None:
+                raise KisekiError(
+                    f"no OCR line matches {needle!r} on the current frame",
+                    code_hint="TEXT_NOT_FOUND",
+                    text=needle,
+                    lines=[str(item.get("text")) for item in (result.get("lines") or [])][:12],
+                )
+            center = line.get("normalized_center") or []
+            if len(center) != 2:
+                raise KisekiError(
+                    f"OCR line {line.get('text')!r} has no normalized centre",
+                    code_hint="TEXT_NOT_FOUND",
+                    text=needle,
+                )
+            matches.append(
+                {
+                    "text": needle,
+                    "matched_text": line.get("text"),
+                    "score": line.get("score"),
+                    "rect": line.get("rect"),
+                    "normalized_center": center,
+                }
+            )
+            resolved.append(
+                {
+                    "type": "click",
+                    "target": {"x": float(center[0]), "y": float(center[1])},
+                    "button": action.get("button") or "left",
+                    "clicks": action.get("clicks") or 1,
+                    "hold_ms": action.get("hold_ms") or 60,
+                }
+            )
+        return resolved, matches
+
     def game_act(
         self,
         game_id: str,
@@ -362,7 +442,8 @@ class Runtime:
         profile = self.profile(game_id)
         window = self._focused_window(profile)
         self._cancel_check(profile)
-        planned = action_module.plan_actions(profile, actions, window["client"])
+        resolved_actions, text_matches = self._resolve_text_actions(profile, actions)
+        planned = action_module.plan_actions(profile, resolved_actions, window["client"])
         if dry_run is None:
             dry_run = profile_module.dry_run_default(profile)
         if dry_run:
@@ -371,6 +452,7 @@ class Runtime:
                 "game_id": profile["id"],
                 "dry_run": True,
                 "planned": planned,
+                "text_matches": text_matches,
                 "hint": "set dry_run=false (and safety.dry_run: false in the profile) to inject input",
             }
         power.keep_awake()
@@ -383,7 +465,13 @@ class Runtime:
             check_fn=lambda name: self._evaluate_check(profile, name),
         )
         self._actions += len(trace)
-        return {"ok": True, "game_id": profile["id"], "dry_run": False, "executed": trace}
+        return {
+            "ok": True,
+            "game_id": profile["id"],
+            "dry_run": False,
+            "executed": trace,
+            "text_matches": text_matches,
+        }
 
     def game_skill(
         self,
