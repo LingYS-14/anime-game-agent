@@ -1,7 +1,7 @@
 # KISEKI · 二次元游戏智能体
 
 > 让 Agent 看着屏幕、理解局面、替你打完二次元游戏的日常。
-> 当前状态：**v0.7 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR + M1.2 技能守卫 + M1.3 HID 传输层**（2026-11-08 起）：`src/kiseki_runtime` 提供 13 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`game_ocr` PaddleOCR 文本识别、`game_check` 技能前置/后置守卫、`dry_run`、F12 急停、58 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
+> 当前状态：**v0.8 / M0 已跑通 + M1.0 模板匹配 + M1.1 OCR + M1.2 技能守卫 + M1.3 HID 传输层**（2026-11-08 起）：`src/kiseki_runtime` 提供 13 个 MCP 工具（含 `game_locate` / `game_wait_for` 模板匹配、`game_ocr` PaddleOCR 文本识别、`game_check` 技能前置/后置守卫、`dry_run`、F12 急停、58 个离线单测）；星铁已实机校准 42 个界面锚点，终末地只读定位可用（ACE 过滤合成输入）；`vendor/GameScaling` 为官方仓库镜像（不入库）。
 >
 > **v0.3 范围基线**：GameScaling 仅作参考；首发 **崩坏：星穹铁道（只测 UI）** 与 **明日方舟：终末地（地图 > 基建 > 战斗）**；DSH 作为 Agent 基座，主模型继续云端、只用小号。详见 [04-DSH集成与运行时方案](docs/04-DSH集成与运行时方案.md)。
 
@@ -199,7 +199,26 @@ input:
 - `execute_actions(..., backend=...)` 走统一接口，`game_act` 按 profile 的 `input.backend` 自动选择；`game_stop` 会同时释放两种后端的按键/按钮。
 - 没有硬件时所有逻辑都可用 `FakeTransport` + 假光标离线测试（`tests/test_input_backend.py`，13 个用例）。
 
-### M1.4 只读技能链（短信界面）
+### M1.5 感知型等待（check waits）
+
+技能里的固定 `sleep` 换成「等到某个感知状态成立」：`wait` 的 `condition.kind` 新增 `check`，
+由 profile 顶部 `checks:` 的模板/OCR 检查驱动，超时抛 `CHECK_TIMEOUT`（带 `attempts`/`last`）。
+
+```yaml
+skills:
+  - id: phone_open
+    require: [in_game]
+    confirm: [phone_open]
+    actions:
+      - {type: key, keys: [esc], action: tap}
+      - {type: wait, condition: {kind: check, name: phone_open, timeout: 8, interval: 0.25}}
+```
+
+实测（星铁）：`open_mail` 的后置等待 `mail_open` 用 fast OCR 约 1.4 s/次轮询；
+把等待条件写成不可能成立的 check（`mail_open` 在战斗场景）时，1.0 s 预算在 7.71 s 抛
+`CHECK_TIMEOUT`（首次 OCR 含引擎加载，超时是下界不是硬上限）。
+
+## M1.4 只读技能链（短信界面）
 
 在 M1.2 的守卫之上补了三个只读技能，串起「打开手机 → 读短信列表 → 返回」：
 

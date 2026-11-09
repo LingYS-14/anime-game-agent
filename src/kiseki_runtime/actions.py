@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
-from .errors import NotSupportedError, PolicyError
+from .errors import KisekiError, NotSupportedError, PolicyError
 from . import profiles as profile_module
 from . import input_backend
 from .win32 import capture, input as winput
@@ -127,21 +127,40 @@ def _plan_move(action: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _plan_wait(action: dict[str, Any]) -> dict[str, Any]:
+def _plan_wait(profile: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
     condition = action.get("condition")
     if not isinstance(condition, dict):
         raise PolicyError("wait action needs a 'condition' object")
     kind = str(condition.get("kind") or "")
     if kind == "seconds":
         seconds = _require_number(condition.get("seconds", 0), "condition.seconds")
-    elif kind == "stable":
+        return {"kind": "wait", "seconds": max(0.0, seconds), "condition": kind}
+    if kind == "stable":
         seconds = _require_number(condition.get("stable_ms", 500), "condition.stable_ms") / 1000.0
-    else:
-        raise NotSupportedError(
-            f"wait condition {kind!r} needs perception (M1); only 'seconds' and 'stable' work in M0",
-            condition=condition,
-        )
-    return {"kind": "wait", "seconds": max(0.0, seconds), "condition": kind}
+        return {"kind": "wait", "seconds": max(0.0, seconds), "condition": kind}
+    if kind == "check":
+        name = str(condition.get("name") or "").strip()
+        declared = profile_module.checks(profile)
+        if not name or name not in declared:
+            raise PolicyError(
+                f"wait check {name!r} is not declared by this Game Profile",
+                code_hint="UNKNOWN_CHECK",
+                known=sorted(declared),
+            )
+        timeout_s = _require_number(condition.get("timeout", 10), "condition.timeout")
+        interval_s = _require_number(condition.get("interval", 0.3), "condition.interval")
+        return {
+            "kind": "wait",
+            "seconds": 0.0,
+            "condition": "check",
+            "check": name,
+            "timeout_s": max(0.1, timeout_s),
+            "interval_s": max(0.05, interval_s),
+        }
+    raise NotSupportedError(
+        f"wait condition {kind!r} is not supported; use seconds, stable or check",
+        condition=condition,
+    )
 
 
 def plan_actions(
@@ -175,7 +194,7 @@ def plan_actions(
         elif kind == "move":
             planned.append(_plan_move(action))
         elif kind == "wait":
-            planned.append(_plan_wait(action))
+            planned.append(_plan_wait(profile, action))
         elif kind in ("noop",):
             planned.append({"kind": "noop"})
         else:
@@ -194,6 +213,7 @@ def execute_actions(
     backend: input_backend.InputBackend | None = None,
     focus_check: bool = True,
     cancel_check: Callable[[], None] | None = None,
+    check_fn: Callable[[str], dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Execute planned steps with foreground enforcement and cancellation."""
 
@@ -242,6 +262,37 @@ def execute_actions(
             else:
                 injector.mouse_move_to(step["dx"], step["dy"])
         elif kind == "wait":
-            time.sleep(step["seconds"])
+            if step.get("condition") == "check":
+                if check_fn is None:
+                    raise NotSupportedError(
+                        "wait check needs a perception callback",
+                        check=step.get("check"),
+                    )
+                started = time.monotonic()
+                deadline = started + step["timeout_s"]
+                attempts = 0
+                last: dict[str, Any] = {}
+                while True:
+                    attempts += 1
+                    last = check_fn(step["check"])
+                    if last.get("passed"):
+                        break
+                    if time.monotonic() >= deadline:
+                        raise KisekiError(
+                            f"wait check {step['check']!r} timed out after {step['timeout_s']}s",
+                            code_hint="CHECK_TIMEOUT",
+                            check=step["check"],
+                            attempts=attempts,
+                            timeout_s=step["timeout_s"],
+                            last=last,
+                        )
+                    time.sleep(step["interval_s"])
+                step = {
+                    **step,
+                    "attempts": attempts,
+                    "elapsed_s": round(time.monotonic() - started, 3),
+                }
+            else:
+                time.sleep(step["seconds"])
         trace.append({"ok": True, **step})
     return trace

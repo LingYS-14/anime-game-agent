@@ -380,6 +380,7 @@ class Runtime:
             backend=self._input_backend(profile),
             focus_check=bool(profile.get("input", {}).get("focus_check", True)),
             cancel_check=lambda: self._cancel_check(profile),
+            check_fn=lambda name: self._evaluate_check(profile, name),
         )
         self._actions += len(trace)
         return {"ok": True, "game_id": profile["id"], "dry_run": False, "executed": trace}

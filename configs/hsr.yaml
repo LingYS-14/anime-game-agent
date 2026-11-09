@@ -350,7 +350,7 @@ skills:
         action: tap
         hold_ms: 40
       - type: wait
-        condition: {kind: seconds, seconds: 1.5}
+        condition: {kind: check, name: phone_open, timeout: 8, interval: 0.25}
   - id: phone_close
     description: 再按一次 Esc 关闭手机主界面
     require: [phone_open]
@@ -361,7 +361,7 @@ skills:
         action: tap
         hold_ms: 40
       - type: wait
-        condition: {kind: seconds, seconds: 1.2}
+        condition: {kind: check, name: in_game, timeout: 8, interval: 0.25}
   - id: close_panel
     description: 按 Esc 关闭当前面板
     actions:
@@ -382,7 +382,7 @@ skills:
         clicks: 1
         hold_ms: 60
       - type: wait
-        condition: {kind: seconds, seconds: 1.6}
+        condition: {kind: check, name: mail_open, timeout: 10, interval: 0.3}
   - id: back_to_phone
     description: 从短信界面返回手机主界面（Esc）
     require: [mail_open]
@@ -393,7 +393,7 @@ skills:
         action: tap
         hold_ms: 40
       - type: wait
-        condition: {kind: seconds, seconds: 1.2}
+        condition: {kind: check, name: phone_open, timeout: 8, interval: 0.25}
 
 safety:
   max_runtime_s: 1800
