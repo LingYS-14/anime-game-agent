@@ -62,6 +62,17 @@ class CheckExecuteTests(unittest.TestCase):
         self.assertEqual(trace[0]["attempts"], 3)
         self.assertGreaterEqual(trace[0]["elapsed_s"], 0.0)
 
+    def test_accepts_ok_flag_from_guard_results(self) -> None:
+        """Regression: Runtime guards return ``ok``; waits must not require ``passed``."""
+
+        def check(name: str) -> dict:
+            return {"name": name, "kind": "ocr", "ok": True}
+
+        planned = plan(timeout=1, interval=0.01)
+        trace = actions.execute_actions(planned, hwnd=1, focus_check=False, check_fn=check)
+        self.assertEqual(trace[0]["check"], "in_game")
+        self.assertEqual(trace[0]["attempts"], 1)
+
     def test_timeout_raises_and_reports_last_state(self) -> None:
         def check(name: str) -> dict:
             return {"passed": False, "reason": "still hidden"}

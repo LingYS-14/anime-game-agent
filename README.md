@@ -213,6 +213,9 @@ runtime.game_act("hsr", [{"type": "click_text", "text": "短信", "region": [0.6
 
 `dry_run` 时同样会做 OCR 但不发送输入；`text_matches` 会随结果返回，便于判断匹配质量。
 
+真机 dry-run（星铁派对车厢）：`click_text("派对车厢", region=[0,0,0.25,0.08], preset="fast")`
+命中 score 0.9886、rect `[72,20,122,32]`，解析出的 click 落在 `screen [133,36]`，全程未发送输入。
+
 ## M1.5 感知型等待（check waits）
 
 技能里的固定 `sleep` 换成「等到某个感知状态成立」：`wait` 的 `condition.kind` 新增 `check`，
@@ -230,7 +233,8 @@ skills:
 
 实测（星铁）：`open_mail` 的后置等待 `mail_open` 用 fast OCR 约 1.4 s/次轮询；
 `enter_game` 也改成 check 等待：`wait check title_screen timeout 120` → 点「点击进入」→
-`wait check in_game timeout 120`，冷启动不再依赖 42/35 s 的固定秒数。`title_screen` 用 OCR
+`wait check in_game timeout 120`，冷启动不再依赖 42/35 s 的固定秒数。真机闭环 2026-11-09 实测
+**16.8 s** 进游戏（`title_screen` 1 次命中 / 4.4 s，`in_game` 13 次命中 / 12.2 s，后置 hud_chat score 0.97）。`title_screen` 用 OCR
 （fast 预设，region [0.40, 0.92, 0.62, 0.99]，contains 点击进入），在历史标题画面截图上实测
 score 0.9932。
 

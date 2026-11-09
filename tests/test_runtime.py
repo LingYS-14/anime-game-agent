@@ -427,6 +427,21 @@ class CheckTests(unittest.TestCase):
         declared = profiles.checks(runtime.profile("demo"))
         self.assertEqual(sorted(declared), ["mail_text", "mail_visible"])
 
+    def test_guard_result_exposes_passed_flag(self) -> None:
+        """Regression: wait conditions read ``passed``, so guards must expose it."""
+
+        runtime = self.make()
+        located = {
+            "found": True,
+            "score": 0.99,
+            "rect": [1, 2, 3, 4],
+            "normalized_center": [0.5, 0.5],
+        }
+        with patch.object(Runtime, "game_locate", return_value=dict(located)):
+            detail = runtime._evaluate_check(runtime.profile("demo"), "mail_visible")
+        self.assertTrue(detail.get("ok"))
+        self.assertTrue(detail.get("passed"))
+
     DRY_RESULT = {"ok": True, "dry_run": True, "planned": []}
 
     def test_skill_precondition_blocks_the_action(self) -> None:

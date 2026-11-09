@@ -275,7 +275,7 @@ def execute_actions(
                 while True:
                     attempts += 1
                     last = check_fn(step["check"])
-                    if last.get("passed"):
+                    if last.get("passed") or last.get("ok"):
                         break
                     if time.monotonic() >= deadline:
                         raise KisekiError(
