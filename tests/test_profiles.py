@@ -67,6 +67,25 @@ class ShippedProfilesTest(unittest.TestCase):
                             f"{game_id}: skill {skill.get('id')} {key} references unknown check {name!r}",
                         )
 
+    def test_check_waits_reference_declared_checks(self) -> None:
+        for game_id, profile in self.profiles.items():
+            declared = set(profile.get("checks") or {})
+            for entry in [*profile.get("skills", []), *profile.get("tasks", [])]:
+                for action in entry.get("actions", []) or entry.get("steps", []) or []:
+                    if action.get("type") != "wait":
+                        continue
+                    condition = action.get("condition") or {}
+                    if condition.get("kind") != "check":
+                        continue
+                    name = condition.get("name")
+                    self.assertIn(
+                        name,
+                        declared,
+                        f"{game_id}: {entry.get('id')} waits on unknown check {name!r}",
+                    )
+                    self.assertGreater(float(condition.get("timeout", 10)), 0, f"{game_id}: {entry.get('id')} timeout")
+                    self.assertGreater(float(condition.get("interval", 0.3)), 0, f"{game_id}: {entry.get('id')} interval")
+
     def test_checks_have_a_supported_kind(self) -> None:
         for game_id, profile in self.profiles.items():
             for name, entry in (profile.get("checks") or {}).items():
