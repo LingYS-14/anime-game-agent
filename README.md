@@ -215,6 +215,11 @@ skills:
 ```
 
 实测（星铁）：`open_mail` 的后置等待 `mail_open` 用 fast OCR 约 1.4 s/次轮询；
+`enter_game` 也改成 check 等待：`wait check title_screen timeout 120` → 点「点击进入」→
+`wait check in_game timeout 120`，冷启动不再依赖 42/35 s 的固定秒数。`title_screen` 用 OCR
+（fast 预设，region [0.40, 0.92, 0.62, 0.99]，contains 点击进入），在历史标题画面截图上实测
+score 0.9932。
+
 把等待条件写成不可能成立的 check（`mail_open` 在战斗场景）时，1.0 s 预算在 7.71 s 抛
 `CHECK_TIMEOUT`（首次 OCR 含引擎加载，超时是下界不是硬上限）。
 

@@ -264,11 +264,11 @@ tasks:
     success: none
     steps:
       - type: wait
-        condition: {kind: seconds, seconds: 42}
+        condition: {kind: check, name: title_screen, timeout: 120, interval: 1.0}
       - type: click
         target: {anchor: title_enter}
       - type: wait
-        condition: {kind: seconds, seconds: 35}
+        condition: {kind: check, name: in_game, timeout: 120, interval: 1.0}
   - id: open_phone
     name: 打开手机菜单（Esc）
     entry: main_ui
@@ -299,10 +299,12 @@ checks:
     threshold: 0.8
     note: 游戏内 HUD（聊天按钮）可见即视为主界面
   title_screen:
-    anchor: title_enter
-    present: true
-    threshold: 0.8
-    note: 标题画面「点击进入」可见
+    ocr:
+      region: [0.40, 0.92, 0.62, 0.99]
+      contains: 点击进入
+      preset: fast
+      min_confidence: 0.6
+    note: 标题画面底部「点击进入」（OCR 判定，不依赖模板）
   phone_open:
     anchor: phone_close
     present: true
@@ -322,14 +324,14 @@ skills:
     confirm: [in_game]
     actions:
       - type: wait
-        condition: {kind: seconds, seconds: 42}
+        condition: {kind: check, name: title_screen, timeout: 120, interval: 1.0}
       - type: click
         target: {anchor: title_enter}
         button: left
         clicks: 1
         hold_ms: 60
       - type: wait
-        condition: {kind: seconds, seconds: 35}
+        condition: {kind: check, name: in_game, timeout: 120, interval: 1.0}
   - id: open_phone
     description: 点击右上角最左的手机图标打开手机菜单
     actions:
